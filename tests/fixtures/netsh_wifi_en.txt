@@ -1,0 +1,18 @@
+    Name                   : Wi-Fi
+    Description            : Intel(R) Wi-Fi 6 AX201 160MHz
+    GUID                   : 11111111-2222-3333-4444-555555555555
+    Physical address       : aa:bb:cc:dd:ee:01
+    State                  : connected
+    SSID                   : HomeNet
+    BSSID                  : aa:bb:cc:dd:ee:ff
+    Network type           : Infrastructure
+    Radio type             : 802.11ax
+    Authentication         : WPA2-Personal
+    Cipher                 : CCMP
+    Connection mode        : Auto Connect
+    Band                   : 5 GHz
+    Channel                : 36
+    Receive rate (Mbps)    : 866.7
+    Transmit rate (Mbps)   : 866.7
+    Signal                 : 82%
+    Profile                : HomeNet
