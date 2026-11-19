@@ -6,10 +6,12 @@
 ## Snapshot
 
 - Branch: `phase-0`
-- HEAD: `b6ee481`
+- HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
 - Tests: **104 passed** (2026-11-19)
 - Python: `.venv\Scripts\python.exe` (3.14.10)
+
+> เริ่มงาน: **Phase 1 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 1 (CLI narrator + status)
 
 ## อ่านตามลำดับ
 
@@ -35,12 +37,20 @@
 
 ## งานถัดไป (Phase 2)
 
-1. **CLI / Timeline สรุปภาษาคน**
-   - นำ `narrator` ไปใช้แสดงผลใน `blackbox show recent` หรือ command สรุปสถานะ
-2. **UI Launcher / Tray (Phase 2)**
-   - System tray icon และหน้าต่างสรุปสถานะ
-3. **ISP Evidence Pack / Report (Phase 3)**
-   - สร้างรายงานสรุปประวัติสำหรับส่งแจ้ง ISP
+Phase 1 complete — ทำตามลำดับ:
+
+1. **CLI narrator + status** (เล็กสุด, ทำก่อน)
+   - `show recent` แสดง `narrate_event()` ใต้ event
+   - เพิ่ม `show status` สรุปสถานะ + event ล่าสุด
+   - test ใน `tests/test_cli.py`
+2. **Local API (FastAPI)**
+   - bind `127.0.0.1`, token, ตรวจ Host/Origin
+   - endpoints: status / events / probes
+3. **Launcher + tray + pywebview**
+   - ใช้ pattern Router Watch: one exe two modes, `--serve`
+   - close-to-tray, single instance, Job Object
+4. **Notification**
+5. **Phase 3: evidence pack / report**
 
 ## ข้อจำกัดสำคัญ
 
