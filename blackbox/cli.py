@@ -18,6 +18,26 @@ def _common_parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-dir", default=None)
     return parser
 
+_THAI_MONTHS = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+]
+
+
+def format_ts(value: str, tz: timezone | None = None) -> str:
+    local = datetime.fromisoformat(value).astimezone(tz)
+    return f"{local.day} {_THAI_MONTHS[local.month - 1]} {local.year} {local:%H:%M:%S}"
+
+
+def format_range(start: str, end: str | None, tz: timezone | None = None) -> str:
+    start_local = datetime.fromisoformat(start).astimezone(tz)
+    if not end:
+        return f"{format_ts(start, tz)}–ongoing"
+    end_local = datetime.fromisoformat(end).astimezone(tz)
+    seconds = max(0, int((end_local - start_local).total_seconds()))
+    minutes, secs = divmod(seconds, 60)
+    duration = f"{minutes} นาที {secs} วิ" if minutes else f"{secs} วิ"
+    return f"{format_ts(start, tz)}–{end_local:%H:%M:%S} ({duration})"
 
 def build_parser() -> argparse.ArgumentParser:
     common = _common_parser()
