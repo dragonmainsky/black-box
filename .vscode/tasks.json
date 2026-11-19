@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Black Box: probe once",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["main.py", "probe", "once", "--data-dir", "${workspaceFolder}\\data"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Black Box: probe loop",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["main.py", "probe", "loop", "--data-dir", "${workspaceFolder}\\data"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Black Box: show recent",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["main.py", "show", "recent", "--data-dir", "${workspaceFolder}\\data"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Black Box: run tests",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "pytest", "-v"],
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

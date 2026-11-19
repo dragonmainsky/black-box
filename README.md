@@ -14,7 +14,21 @@
    - `Black Box: show recent` — ดูข้อมูลล่าสุด
    - `Black Box: tests` — รันเทสต์
 
-## CLI
+## คำสั่งแบบสั้น
+
+```powershell
+.\blackbox.bat db init
+.\blackbox.bat probe once
+.\blackbox.bat probe loop
+.\blackbox.bat show recent
+.\blackbox.bat db maintenance
+.\run-tests.bat
+```
+
+ถ้าไม่ระบุ `--data-dir` จะใช้ `%APPDATA%\BlackBox`
+สำหรับเดโม/ทดสอบใช้ `.\blackbox.bat probe once --data-dir .\data`
+
+## CLI (แบบเต็ม)
 
 ```powershell
 .\.venv\Scripts\python.exe main.py db init --data-dir .\data
@@ -54,7 +68,7 @@
 
 ## ผลทดสอบ Phase 0 (2026-11-19)
 
-- Unit tests: **63 passed**
+- Unit tests: **67 passed**
 - probe จริงผ่าน: gateway, 1.1.1.1, 8.8.8.8, DNS, Wi-Fi, ARP
 - 10-minute loop (ก่อนแก้ตาม review): **117 probe rows**, 0 error, 0 gap event
   - ping 63, dns 33, wifi 18, arp 3
