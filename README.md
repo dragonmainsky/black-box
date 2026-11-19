@@ -2,7 +2,7 @@
 
 ตัวบันทึกสุขภาพอินเทอร์เน็ตในบ้าน — เฝ้า ping / DNS / Wi-Fi / ARP แล้วเก็บหลักฐานไว้ดูย้อนหลัง
 
-> **สถานะ:** Phase 2 บางส่วน — probes + rules + CLI + local API; ยังไม่มีหน้าจอ/tray
+> **สถานะ:** Phase 2 บางส่วน — probes + rules + CLI + API + tray/window เบื้องต้น; ยังไม่มี notification/settings
 
 ## เริ่มใช้งานใน VS Code
 
@@ -18,6 +18,7 @@
 ## คำสั่งแบบสั้น
 
 ```powershell
+.\blackbox.bat desktop
 .\blackbox.bat db init
 .\blackbox.bat probe once
 .\blackbox.bat probe loop
@@ -27,6 +28,9 @@
 .\blackbox.bat db maintenance
 .\run-tests.bat
 ```
+
+> `desktop` เปิดหน้าต่าง + tray; ปิดหน้าต่าง = ซ่อนลง tray, ออกที่เมนู tray
+> ใช้ `--data-dir .\data` สำหรับเดโม/ทดสอบ
 
 ถ้าไม่ระบุ `--data-dir` จะใช้ `%APPDATA%\BlackBox`
 สำหรับเดโม/ทดสอบใช้ `.\blackbox.bat probe once --data-dir .\data`
@@ -40,6 +44,7 @@
 .\.venv\Scripts\python.exe main.py show status --data-dir .\data
 .\.venv\Scripts\python.exe main.py show recent --data-dir .\data
 .\.venv\Scripts\python.exe main.py serve-api --data-dir .\data
+.\.venv\Scripts\python.exe main.py desktop --data-dir .\data
 .\.venv\Scripts\python.exe main.py db maintenance --data-dir .\data
 ```
 
@@ -48,6 +53,7 @@
 - `probe loop` พิมพ์สรุปทุกครั้งที่วัดเสร็จ; หยุดด้วย `Ctrl+C`
 - `probe loop --interval 60` เปลี่ยน cadence ของ ping และคำนวณ DNS/Wi-Fi/ARP ให้อัตโนมัติ
 - `serve-api` เปิด Local API บน `127.0.0.1:8765` พร้อม token; ใช้ `--port` เพื่อเปลี่ยนพอร์ต
+- `desktop` เปิด tray + หน้าต่าง pywebview; ปิดหน้าต่าง = ซ่อนลง tray
 
 ## สิ่งที่วัด
 

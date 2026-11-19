@@ -389,3 +389,15 @@ def test_run_api_rejects_non_loopback_host(tmp_path: Path):
     engine = _make_engine(tmp_path)
     with pytest.raises(ValueError, match="127.0.0.1"):
         run_api(engine, host="0.0.0.0", token=TOKEN)
+
+
+def test_index_serves_html_with_token(tmp_path: Path):
+    client = _client(tmp_path)
+    response = client.get(f"/?token={TOKEN}")
+    assert response.status_code == 200
+    assert "Home Network Black Box" in response.text
+
+
+def test_index_requires_token(tmp_path: Path):
+    client = _client(tmp_path)
+    assert client.get("/").status_code == 401

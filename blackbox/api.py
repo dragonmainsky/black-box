@@ -8,13 +8,14 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import APIRouter, FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.engine import Engine
 
 from blackbox.events.narrator import narrate_event
 from blackbox.status import get_system_status
 from blackbox.store.events import get_open_events, recent_events
 from blackbox.store.probes import recent_probes
+from blackbox.ui import INDEX_HTML
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
@@ -206,6 +207,10 @@ def create_app(
     @app.get("/health")
     def health() -> dict[str, bool]:
         return {"ok": True}
+
+    @app.get("/", response_class=HTMLResponse)
+    def index() -> str:
+        return INDEX_HTML
 
     app.include_router(api_router)
     app.add_middleware(

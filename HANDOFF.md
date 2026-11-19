@@ -8,10 +8,10 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **137 passed** (2026-11-19)
+- Tests: **141 passed** (2026-11-19)
 - Python: รัน `.\setup.bat` ครั้งแรก เพื่อสร้าง `.venv` (ไม่มี `.venv` ใน repo)
 
-> เริ่มงาน: **Phase 2 ข้อ 2 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 3 (Launcher/tray + pywebview)
+> เริ่มงาน: **Phase 2 ข้อ 3 เสร็จแล้ว** — เริ่ม Notification / Settings / Packaging
 
 ## อ่านตามลำดับ
 
@@ -45,6 +45,11 @@
   - `/health`, `/api/status`, `/api/events?open_only=&type=`, `/api/probes?probe=`
   - CLI: `blackbox serve-api [--port 8765] [--token ...]`
   - 24 unit tests ครอบ security + endpoints
+- Phase 2 ข้อ 3 (เสร็จแล้ว):
+  - `blackbox/desktop.py` — tray + pywebview window + probe/API ใน process เดียว
+  - `blackbox/ui.py` — dashboard HTML ฝังใน API (`/`)
+  - `blackbox desktop` — single instance (mutex), close-to-tray, tray menu
+  - `setup.bat` ติดตั้ง `requirements-desktop.txt` (pywebview/pystray/Pillow)
 
 ## งานถัดไป (Phase 2)
 
@@ -52,11 +57,10 @@
 
 1. [x] **CLI narrator + status** (เสร็จแล้ว)
 2. [x] **Local API (FastAPI)** (เสร็จแล้ว)
-3. **Launcher + tray + pywebview**
-   - ใช้ pattern Router Watch: one exe two modes, `--serve`
-   - close-to-tray, single instance, Job Object
-4. **Notification**
-5. **Phase 3: evidence pack / report**
+3. [x] **Launcher + tray + pywebview** (เสร็จแล้ว)
+4. **Notification** — แจ้งเตือน event ระดับ high
+5. **Settings UI** — interval / retention / public IP / autostart
+6. **Phase 3: evidence pack / report**
 
 ## ข้อจำกัดสำคัญ
 
@@ -73,6 +77,7 @@
 ```powershell
 .\setup.bat          # ครั้งแรก — สร้าง .venv + ติดตั้ง deps
 .\run-tests.bat
+.\blackbox.bat desktop
 .\blackbox.bat probe once
 .\blackbox.bat probe loop
 .\blackbox.bat show status

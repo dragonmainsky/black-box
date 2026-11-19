@@ -128,6 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     status_parser.add_argument("--limit", type=int, default=5)
 
+    desktop = sub.add_parser(
+        "desktop", parents=[common], help="open tray and window"
+    )
+    desktop.add_argument("--port", type=int, default=None)
+
     serve = sub.add_parser("serve-api", parents=[common], help="run local API server")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765)
@@ -149,6 +154,15 @@ def main(argv: list[str] | None = None) -> int:
         if interval is not None:
             config = config.with_base_interval(interval)
         config.validate()
+
+        if args.command == "desktop":
+            from blackbox.desktop import run_desktop
+
+            run_desktop(
+                data_dir=data_dir,
+                port=getattr(args, "port", None),
+            )
+            return 0
 
         engine = create_engine(data_dir)
         init_db(engine)
