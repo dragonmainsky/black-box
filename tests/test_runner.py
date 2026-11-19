@@ -280,3 +280,57 @@ def test_run_once_opens_new_device_event(tmp_path):
     runner.run_once(BASE + timedelta(minutes=5))
     events_after = [e for e in runner.recent_events() if e["type"] == "new_device"]
     assert len(events_after) == 2
+
+
+def test_public_ip_change_opens_event_when_ip_changes(tmp_path):
+    ip_holder = ["203.0.113.1"]
+
+    def fake_ip():
+        return ProbeResult(
+            probe="public_ip",
+            target="ipify",
+            ok=True,
+            text_value=ip_holder[0],
+        )
+
+    cfg = Config(data_dir=tmp_path, public_ip_enabled=True)
+    engine = create_engine(tmp_path)
+    init_db(engine)
+    runner = ProbeRunner(
+        engine,
+        cfg,
+        interface_fn=lambda: None,
+        dns_servers_fn=lambda alias: ["1.1.1.1"],
+        ping_sender=type("S", (), {"send": lambda self, t, ms: 10.0})(),
+        dns_resolver_fn=lambda r, d, t: type(
+            "A",
+            (),
+            {
+                "resolver": r,
+                "rcode": "NOERROR",
+                "answers": ["1.2.3.4"],
+                "latency_ms": 5.0,
+            },
+        )(),
+        wifi_run_fn=lambda: (1, "", "no wifi"),
+        arp_run_fn=lambda: (0, "", ""),
+        public_ip_fn=fake_ip,
+    )
+
+    # First cycle: records baseline IP, no event
+    runner.run_cycle(BASE)
+    assert meta_get(engine, "last_public_ip") == "203.0.113.1"
+    assert [e for e in runner.recent_events() if e["type"] == "public_ip_change"] == []
+
+    # Second cycle: IP unchanged, no event
+    runner.run_cycle(BASE + timedelta(minutes=15))
+    assert [e for e in runner.recent_events() if e["type"] == "public_ip_change"] == []
+
+    # Third cycle: IP changed -> opens public_ip_change event
+    ip_holder[0] = "203.0.113.99"
+    runner.run_cycle(BASE + timedelta(minutes=30))
+    events = [e for e in runner.recent_events() if e["type"] == "public_ip_change"]
+    assert len(events) == 1
+    assert events[0]["severity"] == "low"
+    assert events[0]["evidence"] == {"old_ip": "203.0.113.1", "new_ip": "203.0.113.99"}
+    assert meta_get(engine, "last_public_ip") == "203.0.113.99"

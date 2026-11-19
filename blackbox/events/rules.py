@@ -38,6 +38,11 @@ _RULES: dict[str, tuple[str, str, str]] = {
         "พบอุปกรณ์ใหม่",
         "พบ MAC address ที่ไม่เคยเห็นในเครือข่าย",
     ),
+    "public_ip_change": (
+        "low",
+        "Public IP เปลี่ยน",
+        "หมายเลข Public IP มีการเปลี่ยนแปลง",
+    ),
 }
 
 

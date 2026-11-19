@@ -220,6 +220,21 @@ class ProbeRunner:
                 self.public_ip_fn() if self.public_ip_fn else probe_public_ip()
             )
             results.append(result)
+            if result.ok and result.text_value:
+                current_ip = result.text_value
+                last_ip = meta_get(self.engine, "last_public_ip")
+                if last_ip and last_ip != current_ip:
+                    open_event(
+                        self.engine,
+                        event_type="public_ip_change",
+                        severity="low",
+                        title="Public IP เปลี่ยน",
+                        details=f"Public IP เปลี่ยนจาก {last_ip} เป็น {current_ip}",
+                        evidence={"old_ip": last_ip, "new_ip": current_ip},
+                        ts=now,
+                    )
+                if last_ip != current_ip:
+                    meta_set(self.engine, "last_public_ip", current_ip)
             self._last_run["public_ip"] = now
 
         results = self._stamp(results, info)
