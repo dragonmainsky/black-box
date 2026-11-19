@@ -85,13 +85,15 @@ def ping_window_loss(
     return PingLoss(sent=sent, recv=recv, loss_pct=loss_pct)
 
 
-def recent_probes(engine: Engine, limit: int = 50) -> list[dict]:
+def recent_probes(
+    engine: Engine, limit: int = 50, probe: str | None = None
+) -> list[dict]:
+    query = select(probes)
+    if probe:
+        query = query.where(probes.c.probe == probe)
+    query = query.order_by(probes.c.id.desc()).limit(limit)
     with engine.connect() as conn:
-        rows = (
-            conn.execute(select(probes).order_by(probes.c.id.desc()).limit(limit))
-            .mappings()
-            .all()
-        )
+        rows = conn.execute(query).mappings().all()
     out = []
     for row in rows:
         item = dict(row)

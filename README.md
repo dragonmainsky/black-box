@@ -22,6 +22,7 @@
 .\blackbox.bat probe loop
 .\blackbox.bat show status
 .\blackbox.bat show recent
+.\blackbox.bat serve-api
 .\blackbox.bat db maintenance
 .\run-tests.bat
 ```
@@ -37,6 +38,7 @@
 .\.venv\Scripts\python.exe main.py probe loop --data-dir .\data
 .\.venv\Scripts\python.exe main.py show status --data-dir .\data
 .\.venv\Scripts\python.exe main.py show recent --data-dir .\data
+.\.venv\Scripts\python.exe main.py serve-api --data-dir .\data
 .\.venv\Scripts\python.exe main.py db maintenance --data-dir .\data
 ```
 
@@ -44,6 +46,7 @@
 - `probe once` คืน exit code `2` ถ้ามี probe ที่ล้มเหลว
 - `probe loop` พิมพ์สรุปทุกครั้งที่วัดเสร็จ; หยุดด้วย `Ctrl+C`
 - `probe loop --interval 60` เปลี่ยน cadence ของ ping และคำนวณ DNS/Wi-Fi/ARP ให้อัตโนมัติ
+- `serve-api` เปิด Local API บน `127.0.0.1:8765` พร้อม token; ใช้ `--port` เพื่อเปลี่ยนพอร์ต
 
 ## สิ่งที่วัด
 
@@ -103,8 +106,21 @@
 
 - **CLI narrator + status** (เสร็จแล้ว):
   - `show recent` แสดงคำอธิบายภาษาคน (`narrate_event()`) ใต้แต่ละแถว event
-  - เพิ่ม `show status` สรุปสถานะเครือข่ายปัจจุบัน (ปกติ/เตือน/วิกฤต), interface, gateway, public IP, จำนวนอุปกรณ์, เหตุการณ์ที่กำลังเกิด (open events) และเหตุการณ์ล่าสุด (113 tests passed)
+  - เพิ่ม `show status` สรุปสถานะเครือข่ายปัจจุบัน (ปกติ/เตือน/วิกฤต), interface, gateway, public IP, จำนวนอุปกรณ์, เหตุการณ์ที่กำลังเกิด (open events) และเหตุการณ์ล่าสุด
   - `blackbox/status.py` สำหรับคำนวณและสรุปสถานะระบบ (พร้อมรองรับ Local API ต่อไป)
+
+- **Local API — FastAPI** (เสร็จแล้ว):
+  - `blackbox/api.py` — FastAPI + SecurityMiddleware
+  - bind `127.0.0.1` เท่านั้น; ห้ามใช้ `0.0.0.0`
+  - Token สุ่ม 32-byte URL-safe; บันทึกใน `<data-dir>/api.token` (chmod 600)
+  - ตรวจ Host header (DNS-rebinding defense), Origin, Referer
+  - ไม่เปิด CORS
+  - `/health` — liveness probe (ไม่ต้อง token)
+  - `/api/status` — สถานะระบบ + open events + recent events พร้อม narrative
+  - `/api/events?limit=50&type=...&open_only=true` — รายการ event พร้อม narrative
+  - `/api/probes?limit=50&probe=...` — รายการ probe ล่าสุด
+  - `CLI: blackbox serve-api [--port 8765] [--token ...]`
+  - 24 unit tests (137 tests ทั้งหมด)
 
 ## เอกสาร
 

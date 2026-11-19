@@ -8,10 +8,10 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **113 passed** (2026-11-19)
+- Tests: **137 passed** (2026-11-19)
 - Python: `.venv\Scripts\python.exe` (3.14.10)
 
-> เริ่มงาน: **Phase 2 ข้อ 1 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 2 (Local API - FastAPI)
+> เริ่มงาน: **Phase 2 ข้อ 2 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 3 (Launcher/tray + pywebview)
 
 ## อ่านตามลำดับ
 
@@ -33,20 +33,25 @@
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 113 passed
+- Tests: 137 passed
 - Phase 2 ข้อ 1 (เสร็จแล้ว):
   - `show recent` แสดง `narrate_event()` ใต้แถว event
   - เพิ่ม `show status` สรุปสถานะสุขภาพ (ปกติ/เตือน/วิกฤต), ข้อมูลเครือข่าย, เหตุการณ์ที่กำลังเกิด, และประวัติล่าสุด
   - โมดูล `blackbox/status.py` สำหรับ query และ format สถานะระบบ
+- Phase 2 ข้อ 2 (เสร็จแล้ว):
+  - `blackbox/api.py` — FastAPI + SecurityMiddleware
+  - bind `127.0.0.1` เท่านั้น; token 32-byte urlsafe; บันทึก `api.token` (chmod 600)
+  - ตรวจ Host (DNS-rebinding), Origin, Referer; ไม่เปิด CORS
+  - `/health`, `/api/status`, `/api/events?open_only=&type=`, `/api/probes?probe=`
+  - CLI: `blackbox serve-api [--port 8765] [--token ...]`
+  - 24 unit tests ครอบ security + endpoints
 
 ## งานถัดไป (Phase 2)
 
 ทำตามลำดับ:
 
-1. [x] **CLI narrator + status** (เสร็จแล้ว — commit ถัดไป)
-2. **Local API (FastAPI)**
-   - bind `127.0.0.1`, token, ตรวจ Host/Origin
-   - endpoints: status / events / probes
+1. [x] **CLI narrator + status** (เสร็จแล้ว)
+2. [x] **Local API (FastAPI)** (เสร็จแล้ว)
 3. **Launcher + tray + pywebview**
    - ใช้ pattern Router Watch: one exe two modes, `--serve`
    - close-to-tray, single instance, Job Object
@@ -69,7 +74,9 @@
 .\run-tests.bat
 .\blackbox.bat probe once
 .\blackbox.bat probe loop
+.\blackbox.bat show status
 .\blackbox.bat show recent
+.\blackbox.bat serve-api
 .\blackbox.bat db maintenance
 ```
 
@@ -81,9 +88,10 @@ VS Code: เปิดโฟลเดอร์นี้ → เลือก `.ven
 
 - `07c33fb`, `2e94571`, `0524a7b` — Thai date formatting
 - `a465329` — probe loop startup/per-cycle summary
+- `828cb25` — CLI narrator + show status
+- `(latest)` — Local API (blackbox/api.py)
 
-ก่อนแก้ `cli.py` / `runner.py` ให้เช็ก `git log --oneline -5` และ `git status --short` ก่อน
-ถ้ามี agent อีกตัวกำลังทำงาน ให้เริ่มไฟล์ใหม่หรือประสานก่อน
+ก่อนแก้ `cli.py` / `runner.py` / `api.py` ให้เช็ก `git log --oneline -5` และ `git status --short` ก่อน
 
 ## Definition of done
 

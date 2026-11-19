@@ -127,6 +127,11 @@ def build_parser() -> argparse.ArgumentParser:
         "status", parents=[common], help="summary status and latest events"
     )
     status_parser.add_argument("--limit", type=int, default=5)
+
+    serve = sub.add_parser("serve-api", parents=[common], help="run local API server")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8765)
+    serve.add_argument("--token", default=None)
     return parser
 
 
@@ -218,6 +223,18 @@ def main(argv: list[str] | None = None) -> int:
                         if narrative:
                             print(f"  {narrative}")
                 return 0
+
+        if args.command == "serve-api":
+            from blackbox.api import run_api
+
+            run_api(
+                engine=engine,
+                host=args.host,
+                port=args.port,
+                token=args.token,
+                data_dir=data_dir,
+            )
+            return 0
 
         parser.print_help()
         return 0

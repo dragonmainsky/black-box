@@ -169,17 +169,23 @@ def last_gap_start(engine: Engine) -> str | None:
         return row[0] if row else None
 
 
-def recent_events(engine: Engine, limit: int = 50) -> list[dict]:
+def recent_events(
+    engine: Engine, limit: int = 50, event_type: str | None = None
+) -> list[dict]:
+    query = select(events)
+    if event_type:
+        query = query.where(events.c.type == event_type)
+    query = query.order_by(events.c.id.desc()).limit(limit)
     with engine.connect() as conn:
-        rows = (
-            conn.execute(select(events).order_by(events.c.id.desc()).limit(limit))
-            .mappings()
-            .all()
-        )
+        rows = conn.execute(query).mappings().all()
     out = []
     for row in rows:
         item = dict(row)
         if item.get("evidence"):
-            item["evidence"] = json.loads(item["evidence"])
+            if isinstance(item["evidence"], str):
+                try:
+                    item["evidence"] = json.loads(item["evidence"])
+                except (ValueError, TypeError):
+                    pass
         out.append(item)
     return out
