@@ -26,6 +26,7 @@
 
 - `--data-dir` ไม่ระบุ → ใช้ `%APPDATA%\BlackBox`
 - `probe once` คืน exit code `2` ถ้ามี probe ที่ล้มเหลว
+- `probe loop` พิมพ์สรุปทุกครั้งที่วัดเสร็จ; หยุดด้วย `Ctrl+C`
 - `probe loop --interval 60` เปลี่ยน cadence ของ ping และคำนวณ DNS/Wi-Fi/ARP ให้อัตโนมัติ
 
 ## สิ่งที่วัด

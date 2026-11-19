@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from blackbox.config import Config
-from blackbox.probes.runner import ProbeRunner
+from blackbox.probe_types import ProbeResult
+from blackbox.probes.runner import ProbeRunner, summarize_cycle
 from blackbox.store.db import create_engine, init_db
 from blackbox.store.meta import meta_get, meta_set
 from blackbox.store.probes import recent_probes
@@ -145,3 +146,37 @@ def test_run_once_includes_wifi_when_monitored(tmp_path):
     )
     results = runner.run_once(BASE)
     assert any(result.probe == "wifi" for result in results)
+
+
+def test_summarize_cycle_counts():
+    results = [
+        ProbeResult(probe="ping", target="1.1.1.1", ok=True),
+        ProbeResult(
+            probe="dns", target="1.1.1.1", ok=False, error_kind="network"
+        ),
+    ]
+    text = summarize_cycle(results)
+    assert "ping 1" in text
+    assert "dns 1" in text
+    assert "fail 1" in text
+    assert "network" in text
+
+
+def test_run_forever_prints_start_and_cycle(tmp_path, capsys):
+    runner = _runner(tmp_path)
+    runner._maybe_maintenance = lambda now: None
+    calls = []
+
+    def fake_cycle(now):
+        calls.append(now)
+        if len(calls) == 2:
+            raise KeyboardInterrupt
+        return [ProbeResult(probe="ping", target="1.1.1.1", value=10.0, ok=True)]
+
+    runner.run_cycle = fake_cycle
+    runner.sleep_fn = lambda seconds: None
+    with pytest.raises(KeyboardInterrupt):
+        runner.run_forever()
+    out = capsys.readouterr().out
+    assert "เริ่มเฝ้าระวัง" in out
+    assert "ping 1" in out

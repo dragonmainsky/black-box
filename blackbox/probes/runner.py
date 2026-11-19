@@ -24,6 +24,22 @@ from blackbox.store.probes import insert_probes
 from blackbox.store.retention import run_maintenance
 
 
+def summarize_cycle(results: list[ProbeResult]) -> str:
+    counts: dict[str, int] = {}
+    for result in results:
+        counts[result.probe] = counts.get(result.probe, 0) + 1
+    parts = [f"{name} {count}" for name, count in counts.items()]
+    text = ", ".join(parts) if parts else "ไม่มี probe"
+    failures = [result for result in results if not result.ok]
+    if failures:
+        labels = ", ".join(
+            f"{result.target or result.probe}({result.error_kind or 'fail'})"
+            for result in failures[:3]
+        )
+        text += f" | fail {len(failures)}: {labels}"
+    return text
+
+
 class ProbeRunner:
     def __init__(
         self,
@@ -181,6 +197,13 @@ class ProbeRunner:
         )
 
     def run_forever(self) -> None:
+        database = self.engine.url.database or "(unknown)"
+        print(
+            f"เริ่มเฝ้าระวัง — ทุก {self.config.base_interval_s} วินาที",
+            flush=True,
+        )
+        print(f"ฐานข้อมูล: {database}", flush=True)
+        print("กด Ctrl+C เพื่อหยุด", flush=True)
         next_at = time.monotonic()
         while True:
             next_at = max(next_at, time.monotonic())
@@ -188,11 +211,13 @@ class ProbeRunner:
             try:
                 self._maybe_maintenance(now)
             except Exception as exc:
-                print(f"maintenance error: {exc}", file=sys.stderr)
+                print(f"maintenance error: {exc}", file=sys.stderr, flush=True)
             try:
-                self.run_cycle(now)
+                results = self.run_cycle(now)
+                stamp = now.astimezone().strftime("%H:%M:%S")
+                print(f"[{stamp}] {summarize_cycle(results)}", flush=True)
             except Exception as exc:
-                print(f"probe cycle error: {exc}", file=sys.stderr)
+                print(f"probe cycle error: {exc}", file=sys.stderr, flush=True)
             next_at += self.config.base_interval_s
             delay = next_at - time.monotonic()
             if delay < 0:
