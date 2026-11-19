@@ -6,6 +6,7 @@ from blackbox.config import Config
 from blackbox.probe_types import ProbeResult
 from blackbox.probes.runner import ProbeRunner, summarize_cycle
 from blackbox.store.db import create_engine, init_db
+from blackbox.store.events import find_open_event, recent_events
 from blackbox.store.meta import meta_get, meta_set
 from blackbox.store.probes import recent_probes
 
@@ -146,6 +147,65 @@ def test_run_once_includes_wifi_when_monitored(tmp_path):
     )
     results = runner.run_once(BASE)
     assert any(result.probe == "wifi" for result in results)
+
+
+def test_run_once_opens_gateway_down_event(tmp_path):
+    from blackbox.probes.netif import InterfaceInfo
+
+    class GatewayDown:
+        def send(self, target, timeout_ms):
+            return None if target == "192.168.1.1" else 10.0
+
+    runner = _runner(
+        tmp_path,
+        interface_fn=lambda: InterfaceInfo("Ethernet", 5, "192.168.1.1", False),
+        ping_sender=GatewayDown(),
+    )
+    for _ in range(3):
+        runner.run_once(BASE)
+    event = find_open_event(runner.engine, "gateway_down")
+    assert event is not None
+    assert event["severity"] == "high"
+
+
+def test_run_once_closes_gateway_down_event(tmp_path):
+    from blackbox.probes.netif import InterfaceInfo
+
+    class Toggle:
+        fail = True
+
+        def send(self, target, timeout_ms):
+            if target == "192.168.1.1" and self.fail:
+                return None
+            return 10.0
+
+    sender = Toggle()
+    runner = _runner(
+        tmp_path,
+        interface_fn=lambda: InterfaceInfo("Ethernet", 5, "192.168.1.1", False),
+        ping_sender=sender,
+    )
+    for _ in range(3):
+        runner.run_once(BASE)
+    assert find_open_event(runner.engine, "gateway_down") is not None
+
+    sender.fail = False
+    runner.run_once(BASE)
+    assert find_open_event(runner.engine, "gateway_down") is None
+    assert any(
+        event["type"] == "gateway_down" and event["ts_end"]
+        for event in recent_events(runner.engine)
+    )
+
+
+def test_run_once_opens_dns_fail_event(tmp_path):
+    def broken(resolver, domain, timeout_s):
+        raise OSError("dns down")
+
+    runner = _runner(tmp_path, dns_resolver_fn=broken)
+    for _ in range(2):
+        runner.run_once(BASE)
+    assert find_open_event(runner.engine, "dns_fail") is not None
 
 
 def test_summarize_cycle_counts():

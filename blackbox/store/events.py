@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Sequence
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
 from .tables import events
+
+if TYPE_CHECKING:
+    from blackbox.events.rules import EventAction
 
 
 def _iso(ts: datetime) -> str:
@@ -88,6 +92,46 @@ def close_event(engine: Engine, event_id: int, ts: datetime) -> None:
             .where(events.c.id == event_id)
             .values(ts_end=_iso(ts))
         )
+
+
+def open_event_types(engine: Engine) -> list[str]:
+    with engine.connect() as conn:
+        rows = (
+            conn.execute(
+                select(events.c.type).where(events.c.ts_end.is_(None))
+            )
+            .scalars()
+            .all()
+        )
+    return list(dict.fromkeys(rows))
+
+
+def apply_actions(
+    engine: Engine, actions: Sequence["EventAction"]
+) -> list[int]:
+    ids: list[int] = []
+    for action in actions:
+        existing = find_open_event(engine, action.type)
+        if action.action == "open":
+            if existing:
+                ids.append(int(existing["id"]))
+                continue
+            ids.append(
+                open_event(
+                    engine,
+                    action.type,
+                    action.severity,
+                    action.title,
+                    action.details,
+                    action.evidence,
+                    action.ts,
+                )
+            )
+        else:
+            if existing:
+                close_event(engine, int(existing["id"]), action.ts)
+                ids.append(int(existing["id"]))
+    return ids
 
 
 def last_gap_start(engine: Engine) -> str | None:

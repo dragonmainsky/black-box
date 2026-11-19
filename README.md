@@ -68,7 +68,7 @@
 
 ## ผลทดสอบ Phase 0 (2026-11-19)
 
-- Unit tests: **78 passed**
+- Unit tests: **81 passed**
 - probe จริงผ่าน: gateway, 1.1.1.1, 8.8.8.8, DNS, Wi-Fi, ARP
 - 10-minute loop (ก่อนแก้ตาม review): **117 probe rows**, 0 error, 0 gap event
   - ping 63, dns 33, wifi 18, arp 3
@@ -89,7 +89,9 @@
 
 - `blackbox/events/rules.py` — gateway_down, internet_down, dns_fail, dns_slow, wifi_drop, latency_spike
 - `blackbox/store/events.py` — open/close/find open event
-- ยังไม่เชื่อม `runner.py` / `cli.py` (รองาน concurrent)
+- **เชื่อม `runner.py` แล้ว** — ประเมิน rules หลังจบแต่ละรอบและเปิด/ปิด event
+- `show recent` แสดง event ที่เปิด/ปิดแล้ว
+- เหลือ: packet_loss window 5 นาที, new_device, public_ip_change, interface_change, narrator
 
 ## เอกสาร
 

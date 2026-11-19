@@ -10,6 +10,7 @@ from sqlalchemy.engine import Engine
 
 from blackbox.config import Config
 from blackbox.events.gap import record_gap_if_needed
+from blackbox.events.rules import RuleEngine
 from blackbox.probe_types import ProbeResult
 from blackbox.probes.arp import probe_arp
 from blackbox.probes.dns import ResolverFn, probe_dns
@@ -18,7 +19,11 @@ from blackbox.probes.ping import EchoSender, WindowsEchoSender, ping_targets
 from blackbox.probes.public_ip import probe_public_ip
 from blackbox.probes.wifi import RunFn, probe_wifi
 from blackbox.store.devices import upsert_devices
-from blackbox.store.events import recent_events as store_recent_events
+from blackbox.store.events import (
+    apply_actions,
+    open_event_types,
+    recent_events as store_recent_events,
+)
 from blackbox.store.meta import meta_get, meta_set
 from blackbox.store.probes import insert_probes
 from blackbox.store.retention import run_maintenance
@@ -68,6 +73,7 @@ class ProbeRunner:
         self._interface: InterfaceInfo | None = None
         self._interface_checked_at: datetime | None = None
         self._last_run: dict[str, datetime] = {}
+        self._rules: RuleEngine | None = None
 
     def _get_interface(self, now: datetime) -> InterfaceInfo | None:
         if (
@@ -82,6 +88,22 @@ class ProbeRunner:
         if self.ping_sender is None:
             self.ping_sender = WindowsEchoSender()
         return self.ping_sender
+
+    def _ensure_rules(self, info: InterfaceInfo | None) -> RuleEngine:
+        gateway = info.gateway if info else None
+        wifi = bool(info and info.is_wifi)
+        if (
+            self._rules is None
+            or self._rules.gateway != gateway
+            or self._rules.wifi_monitored != wifi
+        ):
+            self._rules = RuleEngine(
+                gateway=gateway,
+                internet_targets=self.config.targets,
+                wifi_monitored=wifi,
+                open_types=open_event_types(self.engine),
+            )
+        return self._rules
 
     def _stamp(self, results: list[ProbeResult], info: InterfaceInfo | None) -> list[ProbeResult]:
         if info is None:
@@ -111,6 +133,7 @@ class ProbeRunner:
     ) -> list[ProbeResult]:
         info = self._get_interface(now)
         alias = info.alias if info else None
+        rules = self._ensure_rules(info)
         results: list[ProbeResult] = []
         if update_last_cycle:
             meta_set(self.engine, "last_cycle", now.isoformat())
@@ -181,6 +204,9 @@ class ProbeRunner:
 
         results = self._stamp(results, info)
         insert_probes(self.engine, results, now)
+        actions = rules.evaluate(results, now)
+        if actions:
+            apply_actions(self.engine, actions)
         return results
 
     def _maybe_maintenance(self, now: datetime):
