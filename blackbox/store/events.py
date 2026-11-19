@@ -106,6 +106,30 @@ def open_event_types(engine: Engine) -> list[str]:
     return list(dict.fromkeys(rows))
 
 
+def get_open_events(engine: Engine) -> list[dict]:
+    with engine.connect() as conn:
+        rows = (
+            conn.execute(
+                select(events)
+                .where(events.c.ts_end.is_(None))
+                .order_by(events.c.id.desc())
+            )
+            .mappings()
+            .all()
+        )
+    out = []
+    for row in rows:
+        item = dict(row)
+        if item.get("evidence"):
+            if isinstance(item["evidence"], str):
+                try:
+                    item["evidence"] = json.loads(item["evidence"])
+                except (ValueError, TypeError):
+                    pass
+        out.append(item)
+    return out
+
+
 def apply_actions(
     engine: Engine, actions: Sequence["EventAction"]
 ) -> list[int]:

@@ -8,10 +8,10 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **104 passed** (2026-11-19)
+- Tests: **113 passed** (2026-11-19)
 - Python: `.venv\Scripts\python.exe` (3.14.10)
 
-> เริ่มงาน: **Phase 1 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 1 (CLI narrator + status)
+> เริ่มงาน: **Phase 2 ข้อ 1 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 2 (Local API - FastAPI)
 
 ## อ่านตามลำดับ
 
@@ -33,16 +33,17 @@
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 104 passed
+- Tests: 113 passed
+- Phase 2 ข้อ 1 (เสร็จแล้ว):
+  - `show recent` แสดง `narrate_event()` ใต้แถว event
+  - เพิ่ม `show status` สรุปสถานะสุขภาพ (ปกติ/เตือน/วิกฤต), ข้อมูลเครือข่าย, เหตุการณ์ที่กำลังเกิด, และประวัติล่าสุด
+  - โมดูล `blackbox/status.py` สำหรับ query และ format สถานะระบบ
 
 ## งานถัดไป (Phase 2)
 
-Phase 1 complete — ทำตามลำดับ:
+ทำตามลำดับ:
 
-1. **CLI narrator + status** (เล็กสุด, ทำก่อน)
-   - `show recent` แสดง `narrate_event()` ใต้ event
-   - เพิ่ม `show status` สรุปสถานะ + event ล่าสุด
-   - test ใน `tests/test_cli.py`
+1. [x] **CLI narrator + status** (เสร็จแล้ว — commit ถัดไป)
 2. **Local API (FastAPI)**
    - bind `127.0.0.1`, token, ตรวจ Host/Origin
    - endpoints: status / events / probes

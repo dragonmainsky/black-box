@@ -20,6 +20,7 @@
 .\blackbox.bat db init
 .\blackbox.bat probe once
 .\blackbox.bat probe loop
+.\blackbox.bat show status
 .\blackbox.bat show recent
 .\blackbox.bat db maintenance
 .\run-tests.bat
@@ -34,6 +35,7 @@
 .\.venv\Scripts\python.exe main.py db init --data-dir .\data
 .\.venv\Scripts\python.exe main.py probe once --data-dir .\data
 .\.venv\Scripts\python.exe main.py probe loop --data-dir .\data
+.\.venv\Scripts\python.exe main.py show status --data-dir .\data
 .\.venv\Scripts\python.exe main.py show recent --data-dir .\data
 .\.venv\Scripts\python.exe main.py db maintenance --data-dir .\data
 ```
@@ -96,6 +98,13 @@
 - `public_ip_change` — บันทึก Public IP ใน meta และเปิด event เมื่อ IP เปลี่ยน
 - `interface_change` — ตรวจจับการเปลี่ยน gateway/interface และเปิด event
 - `blackbox/events/narrator.py` — สรุปเหตุการณ์เป็นภาษาคนจาก event + evidence (104 tests passed)
+
+## Phase 2 (กำลังดำเนินการ)
+
+- **CLI narrator + status** (เสร็จแล้ว):
+  - `show recent` แสดงคำอธิบายภาษาคน (`narrate_event()`) ใต้แต่ละแถว event
+  - เพิ่ม `show status` สรุปสถานะเครือข่ายปัจจุบัน (ปกติ/เตือน/วิกฤต), interface, gateway, public IP, จำนวนอุปกรณ์, เหตุการณ์ที่กำลังเกิด (open events) และเหตุการณ์ล่าสุด (113 tests passed)
+  - `blackbox/status.py` สำหรับคำนวณและสรุปสถานะระบบ (พร้อมรองรับ Local API ต่อไป)
 
 ## เอกสาร
 

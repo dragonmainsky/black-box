@@ -5,8 +5,10 @@ import sys
 from datetime import datetime, timezone
 
 from blackbox.config import Config
+from blackbox.events.narrator import narrate_event
 from blackbox.paths import db_path, resolve_data_dir
 from blackbox.probes.runner import ProbeRunner
+from blackbox.status import SystemStatus, get_system_status
 from blackbox.store.db import create_engine, init_db
 from blackbox.store.events import recent_events
 from blackbox.store.probes import recent_probes
@@ -38,6 +40,56 @@ def format_range(start: str, end: str | None, tz: timezone | None = None) -> str
     minutes, secs = divmod(seconds, 60)
     duration = f"{minutes} นาที {secs} วิ" if minutes else f"{secs} วิ"
     return f"{format_ts(start, tz)}–{end_local:%H:%M:%S} ({duration})"
+
+
+def format_status_output(
+    status: SystemStatus, tz: timezone | None = None
+) -> str:
+    if status.status == "unknown":
+        return "ยังไม่มีข้อมูล"
+
+    lines = []
+    lines.append(f"=== สถานะเครือข่าย: {status.status_text} ===")
+    if status.interface:
+        lines.append(f"Interface : {status.interface}")
+    if status.gateway:
+        lines.append(f"Gateway   : {status.gateway}")
+    if status.public_ip:
+        lines.append(f"Public IP : {status.public_ip}")
+    if status.device_count > 0:
+        lines.append(f"อุปกรณ์   : {status.device_count} เครื่อง")
+    if status.last_cycle:
+        lines.append(f"ตรวจล่าสุด : {format_ts(status.last_cycle, tz)}")
+
+    lines.append("")
+    if status.open_events:
+        lines.append(f"[เหตุการณ์ที่กำลังเกิด] ({len(status.open_events)} รายการ)")
+        for evt in status.open_events:
+            start_str = format_ts(evt["ts_start"], tz)
+            lines.append(
+                f"  - {evt['type']} [{evt['severity']}] (เริ่มเมื่อ {start_str})"
+            )
+            narrative = evt.get("narrative") or narrate_event(evt)
+            if narrative:
+                lines.append(f"    {narrative}")
+    else:
+        lines.append("[เหตุการณ์ที่กำลังเกิด]")
+        lines.append("  ไม่มี (เครือข่ายปกติ)")
+
+    lines.append("")
+    if status.recent_events:
+        lines.append(f"[เหตุการณ์ล่าสุด] ({len(status.recent_events)} รายการ)")
+        for evt in status.recent_events:
+            rng_str = format_range(evt["ts_start"], evt.get("ts_end"), tz)
+            lines.append(f"  - {rng_str} | {evt['type']} [{evt['severity']}]")
+            narrative = evt.get("narrative") or narrate_event(evt)
+            if narrative:
+                lines.append(f"    {narrative}")
+    else:
+        lines.append("[เหตุการณ์ล่าสุด]")
+        lines.append("  ไม่มีประวัติเหตุการณ์")
+
+    return "\n".join(lines)
 
 def build_parser() -> argparse.ArgumentParser:
     common = _common_parser()
@@ -71,6 +123,10 @@ def build_parser() -> argparse.ArgumentParser:
         "recent", parents=[common], help="recent probes and events"
     )
     recent.add_argument("--limit", type=int, default=50)
+    status_parser = show_sub.add_parser(
+        "status", parents=[common], help="summary status and latest events"
+    )
+    status_parser.add_argument("--limit", type=int, default=5)
     return parser
 
 
@@ -118,6 +174,12 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
 
         if args.command == "show":
+            if args.show_command == "status":
+                status_data = get_system_status(
+                    engine, recent_limit=getattr(args, "limit", 5)
+                )
+                print(format_status_output(status_data))
+                return 0
             if args.show_command == "recent":
                 rows = recent_probes(engine, limit=args.limit)
                 events = recent_events(engine, limit=args.limit)
@@ -152,6 +214,9 @@ def main(argv: list[str] | None = None) -> int:
                             f"{ts} | {item['type']} | {item['severity']} | "
                             f"{item['title']} | {end}"
                         )
+                        narrative = narrate_event(item)
+                        if narrative:
+                            print(f"  {narrative}")
                 return 0
 
         parser.print_help()
