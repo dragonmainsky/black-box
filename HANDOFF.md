@@ -9,7 +9,7 @@
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
 - Tests: **137 passed** (2026-11-19)
-- Python: `.venv\Scripts\python.exe` (3.14.10)
+- Python: รัน `.\setup.bat` ครั้งแรก เพื่อสร้าง `.venv` (ไม่มี `.venv` ใน repo)
 
 > เริ่มงาน: **Phase 2 ข้อ 2 เสร็จแล้ว** — เริ่ม Phase 2 ข้อ 3 (Launcher/tray + pywebview)
 
@@ -71,6 +71,7 @@
 ## คำสั่ง
 
 ```powershell
+.\setup.bat          # ครั้งแรก — สร้าง .venv + ติดตั้ง deps
 .\run-tests.bat
 .\blackbox.bat probe once
 .\blackbox.bat probe loop
@@ -80,7 +81,7 @@
 .\blackbox.bat db maintenance
 ```
 
-VS Code: เปิดโฟลเดอร์นี้ → เลือก `.venv\Scripts\python.exe` → F5 หรือ Run Task
+VS Code: รัน `.\setup.bat` ก่อน → เปิดโฟลเดอร์นี้ → เลือก `.venv\Scripts\python.exe` → F5 หรือ Run Task
 
 ## Concurrency warning
 
@@ -89,7 +90,8 @@ VS Code: เปิดโฟลเดอร์นี้ → เลือก `.ven
 - `07c33fb`, `2e94571`, `0524a7b` — Thai date formatting
 - `a465329` — probe loop startup/per-cycle summary
 - `828cb25` — CLI narrator + show status
-- `(latest)` — Local API (blackbox/api.py)
+- `b91f717` — Local API (blackbox/api.py)
+- `c2a2471` / `70b6314` — readability refactor rules/api
 
 ก่อนแก้ `cli.py` / `runner.py` / `api.py` ให้เช็ก `git log --oneline -5` และ `git status --short` ก่อน
 

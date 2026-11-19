@@ -2,13 +2,14 @@
 
 ตัวบันทึกสุขภาพอินเทอร์เน็ตในบ้าน — เฝ้า ping / DNS / Wi-Fi / ARP แล้วเก็บหลักฐานไว้ดูย้อนหลัง
 
-> **สถานะ:** Phase 0 (เครื่องวัด + SQLite + CLI) — ยังไม่มีหน้าจอ/tray
+> **สถานะ:** Phase 2 บางส่วน — probes + rules + CLI + local API; ยังไม่มีหน้าจอ/tray
 
 ## เริ่มใช้งานใน VS Code
 
-1. เปิดโฟลเดอร์ `black-box` ใน VS Code
-2. เลือก interpreter: `.venv\Scripts\python.exe`
-3. กด **F5** แล้วเลือก:
+1. รัน `.\setup.bat` ครั้งแรก — สร้าง `.venv` และติดตั้ง dependencies
+2. เปิดโฟลเดอร์ `black-box` ใน VS Code
+3. เลือก interpreter: `.venv\Scripts\python.exe`
+4. กด **F5** แล้วเลือก:
    - `Black Box: probe loop` — เฝ้าต่อเนื่อง
    - `Black Box: probe once` — ตรวจครั้งเดียว
    - `Black Box: show recent` — ดูข้อมูลล่าสุด
