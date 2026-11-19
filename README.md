@@ -114,7 +114,7 @@
 - `interface_change` — ตรวจจับการเปลี่ยน gateway/interface และเปิด event
 - `blackbox/events/narrator.py` — สรุปเหตุการณ์เป็นภาษาคนจาก event + evidence (104 tests passed)
 
-## Phase 2 (กำลังดำเนินการ)
+## Phase 2 (เสร็จแล้ว)
 
 - **CLI narrator + status** (เสร็จแล้ว):
   - `show recent` แสดงคำอธิบายภาษาคน (`narrate_event()`) ใต้แต่ละแถว event
@@ -133,6 +133,18 @@
   - `/api/probes?limit=50&probe=...` — รายการ probe ล่าสุด
   - `CLI: blackbox serve-api [--port 8765] [--token ...]`
   - 24 unit tests (137 tests ทั้งหมด)
+
+- **Browser UI / timeline (เสร็จแล้ว; ปรับปรุงล่าสุด 2026-11-19)**:
+  - `blackbox/static/` — `index.html`, `style.css`, `app.js` (local-only, ไม่มี CDN/asset ภายนอก)
+  - ภาษาไทยทั้งหน้าจอ; สองคอลัมน์บนเดสก์ท็อป และเรียงสถานะ → ไทม์ไลน์ → ตัวกรอง → ตั้งค่าบนจอแคบ
+  - day / week / month / year, filter severity/type, empty state, ปุ่มเลื่อนช่วง และปุ่ม "วันนี้"
+  - คลิก event หรือแถวในรายการ → แผงรายละเอียด + narrative + evidence; ปิดด้วยปุ่ม, คลิกฉากหลัง หรือ Esc
+  - ลากบนเส้นเวลา (มุมมองวัน) หรือกด "สรุปทั้งช่วง" → `/api/summary` อธิบายช่วงที่เลือก
+  - token จาก URL/sessionStorage ถูกส่งเป็น `X-API-Token` ทุกคำขอ และถูกลบออกจาก URL หลังเก็บ
+  - heatmap สัปดาห์/เดือน/ปีมีสัญลักษณ์/ข้อความระดับความรุนแรง ไม่พึ่งสีอย่างเดียว
+  - สรุป bucket ฝั่งเบราว์เซอร์ตามเวลาท้องถิ่น เพื่อไม่ให้วันเลื่อนจาก bucket UTC
+  - ตั้งค่า interval / retention / public IP และปุ่ม "ออกจากโปรแกรม" ครบ
+  - `node --check blackbox\static\app.js` ผ่าน; `.\run-tests.bat` 170 passed
 
 ## เอกสาร
 

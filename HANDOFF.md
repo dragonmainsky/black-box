@@ -68,12 +68,20 @@
   - ลากเลือกช่วงเวลา → `/api/summary` อธิบายช่วงนี้
   - API: `/api/timeline`, `/api/summary`, `/api/events` + `/api/probes` filters
   - packaging ต้อง include `blackbox/static/`
+- Phase 2 UI pass (2026-11-19) — แก้เฉพาะ `blackbox/static/`:
+  - หน้าจอภาษาไทย, สองคอลัมน์บนเดสก์ท็อป, มือถือเรียงสถานะ → ไทม์ไลน์ → ตัวกรอง → ตั้งค่า
+  - token จาก URL/sessionStorage → `X-API-Token` ทุกคำขอ; ลบ token ออกจาก URL หลังเก็บ
+  - day/week/month/year + filter + detail drawer + range summary + settings + quit ครบ
+  - เพิ่มรายการ "เหตุการณ์ในช่วงนี้", empty state, current-time marker และสัญลักษณ์ระดับใน heatmap
+  - รวม bucket ฝั่งเบราว์เซอร์ตามเวลาท้องถิ่น (แก้ bucket UTC เลื่อนวัน); ยังใช้ API เดิมทั้งหมด
+  - ไม่มี CDN/asset ภายนอก; ใช้ inline SVG + system fonts
+  - ตรวจ `node --check blackbox\static\app.js` ผ่าน; `.\run-tests.bat` 170 passed
 - Single instance / quit (เสร็จแล้ว):
   - `runtime.json` เก็บ pid/port; เปิดซ้ำ → เปิด URL ของ instance เดิม
   - `POST /api/quit` + ปุ่ม “ออกจากโปรแกรม” ใน UI
   - tray “ออก” และ Ctrl+C ยังใช้ได้
 
-## งานถัดไป (Phase 2)
+## งานถัดไป (Packaging / Phase 3)
 
 ทำตามลำดับ:
 

@@ -3,110 +3,257 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Home Network Black Box</title>
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0d1014">
+  <title>Home Network Black Box — สุขภาพอินเทอร์เน็ตในบ้าน</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b0e12'/%3E%3Cpath d='M3 12h4l2.5-7 4 14 2.5-7H21' fill='none' stroke='%233fb950' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>Home Network Black Box</h1>
-      <div id="status-line" class="muted">กำลังโหลด...</div>
+  <svg class="svg-defs" aria-hidden="true" focusable="false">
+    <symbol id="i-activity" viewBox="0 0 24 24">
+      <path d="M3 12h4l2.5-7 4 14 2.5-7H21"/>
+    </symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24">
+      <path d="m15 18-6-6 6-6"/>
+    </symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24">
+      <path d="m9 18 6-6-6-6"/>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </symbol>
+    <symbol id="i-power" viewBox="0 0 24 24">
+      <path d="M12 3v9"/>
+      <path d="M6.4 6.4a8 8 0 1 0 11.2 0"/>
+    </symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="16" rx="2"/>
+      <path d="M8 3v4M16 3v4M3 10h18"/>
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24">
+      <path d="M12 3 2.5 20h19L12 3Z"/>
+      <path d="M12 9v5M12 17h.01"/>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 11v5M12 8h.01"/>
+    </symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24">
+      <path d="M20 12a8 8 0 1 1-2.3-5.7"/>
+      <path d="M20 4v5h-5"/>
+    </symbol>
+  </svg>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg class="icon"><use href="#i-activity"></use></svg>
+      </span>
+      <div class="brand-text">
+        <h1>Home Network Black Box</h1>
+        <p>เครื่องบันทึกสุขภาพอินเทอร์เน็ตในบ้าน</p>
+      </div>
     </div>
-    <div id="status-pill" class="pill">—</div>
+    <div class="header-state" id="header-state" data-status="unknown">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="header-status-text" id="status-pill" aria-live="polite">กำลังโหลด...</span>
+      <span class="header-status-time" id="status-line">—</span>
+    </div>
   </header>
 
-  <main class="wrap">
-    <section class="card status-card">
-      <div id="status" class="status">กำลังโหลด...</div>
-      <div id="details" class="muted"></div>
-    </section>
+  <main class="shell">
+    <aside class="sidebar" aria-label="สถานะและตัวกรอง">
+      <section class="panel status-panel" aria-labelledby="status-heading">
+        <div class="panel-head">
+          <h2 id="status-heading">สถานะตอนนี้</h2>
+          <span class="status-badge" id="status-badge">กำลังโหลด</span>
+        </div>
+        <p class="status-text" id="status-text" aria-live="polite">กำลังโหลด...</p>
+        <p class="status-sub" id="status-sub">—</p>
+        <dl class="facts" id="status-facts"></dl>
+        <div class="open-block">
+          <div class="open-head">
+            <h3>เหตุการณ์ที่กำลังเกิด</h3>
+            <span class="count" id="open-count"></span>
+          </div>
+          <div class="event-list" id="open-events"></div>
+        </div>
+      </section>
 
-    <section class="card toolbar">
-      <div class="tabs">
-        <button data-view="day" class="active">วัน</button>
-        <button data-view="week">สัปดาห์</button>
-        <button data-view="month">เดือน</button>
-        <button data-view="year">ปี</button>
-      </div>
-      <div class="nav">
-        <button id="prev" title="ก่อนหน้า">‹</button>
-        <button id="today">วันนี้</button>
-        <button id="next" title="ถัดไป">›</button>
-      </div>
-      <div class="filters">
-        <select id="filter-severity">
-          <option value="">ทุกระดับ</option>
-          <option value="high">สูง</option>
-          <option value="medium">กลาง</option>
-          <option value="low">ต่ำ</option>
-          <option value="info">ข้อมูล</option>
-        </select>
-        <select id="filter-type">
-          <option value="">ทุกประเภท</option>
-          <option value="gateway_down">gateway_down</option>
-          <option value="internet_down">internet_down</option>
-          <option value="dns_fail">dns_fail</option>
-          <option value="dns_slow">dns_slow</option>
-          <option value="packet_loss">packet_loss</option>
-          <option value="wifi_drop">wifi_drop</option>
-          <option value="latency_spike">latency_spike</option>
-          <option value="new_device">new_device</option>
-          <option value="public_ip_change">public_ip_change</option>
-          <option value="interface_change">interface_change</option>
-          <option value="monitor_gap">monitor_gap</option>
-        </select>
-      </div>
-    </section>
+      <section class="panel filter-panel" aria-labelledby="filter-heading">
+        <div class="panel-head">
+          <h2 id="filter-heading">ตัวกรอง</h2>
+          <button class="text-button" id="clear-filters" type="button">ล้างตัวกรอง</button>
+        </div>
+        <label class="field">
+          <span>ระดับความรุนแรง</span>
+          <select id="filter-severity">
+            <option value="">ทุกระดับ</option>
+            <option value="high">สูง</option>
+            <option value="medium">กลาง</option>
+            <option value="low">ต่ำ</option>
+            <option value="info">ข้อมูล</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>ประเภทเหตุการณ์</span>
+          <select id="filter-type">
+            <option value="">ทุกประเภท</option>
+            <option value="gateway_down">เราเตอร์ไม่ตอบ</option>
+            <option value="internet_down">อินเทอร์เน็ตล่ม</option>
+            <option value="dns_fail">DNS ล้มเหลว</option>
+            <option value="dns_slow">DNS ช้า</option>
+            <option value="packet_loss">แพ็กเก็ตหาย</option>
+            <option value="wifi_drop">ไวไฟหลุด</option>
+            <option value="latency_spike">ความหน่วงสูง</option>
+            <option value="new_device">พบอุปกรณ์ใหม่</option>
+            <option value="public_ip_change">ไอพีสาธารณะเปลี่ยน</option>
+            <option value="interface_change">การเชื่อมต่อเปลี่ยน</option>
+            <option value="monitor_gap">ระบบหยุดบันทึก</option>
+          </select>
+        </label>
+      </section>
 
-    <div class="legend">
-      <span><i class="dot high"></i>สูง</span>
-      <span><i class="dot medium"></i>กลาง</span>
-      <span><i class="dot low"></i>ต่ำ</span>
-      <span><i class="dot info"></i>ข้อมูล</span>
+      <section class="panel settings-panel" aria-labelledby="settings-heading">
+        <div class="panel-head">
+          <h2 id="settings-heading">ตั้งค่า</h2>
+        </div>
+        <div class="settings-grid">
+          <label class="field">
+            <span>ตรวจทุก (วินาที)</span>
+            <input id="interval" type="number" min="10" max="3600" step="1" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>เก็บข้อมูล (วัน)</span>
+            <input id="retention" type="number" min="1" max="3650" step="1" inputmode="numeric">
+          </label>
+          <label class="check-field">
+            <input id="public-ip" type="checkbox">
+            <span>
+              เก็บไอพีสาธารณะ (Public IP)
+              <small id="public-ip-help">ปิดอยู่ — ไม่มีการเช็กไอพีออกนอกเครื่อง</small>
+            </span>
+          </label>
+        </div>
+        <div class="settings-actions">
+          <button id="save-settings" class="button primary" type="button">บันทึก</button>
+          <span id="save-status" class="save-status" role="status" aria-live="polite"></span>
+        </div>
+        <div class="danger-zone">
+          <button id="quit-app" class="button danger" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#i-power"></use></svg>
+            ออกจากโปรแกรม
+          </button>
+          <p>หยุดเฝ้าและปิดการเชื่อมต่อในเครื่องจนกว่าจะเปิดใหม่</p>
+          <p id="quit-status" class="quit-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </aside>
+
+    <div class="main">
+      <section class="panel timeline-panel" aria-labelledby="timeline-heading">
+        <div class="timeline-head">
+          <div class="timeline-title">
+            <h2 id="timeline-heading">ไทม์ไลน์</h2>
+            <p class="range-label" id="range-label">—</p>
+          </div>
+          <div class="timeline-tools">
+            <div class="segmented" role="group" aria-label="มุมมองช่วงเวลา">
+              <button type="button" data-view="day" class="active" aria-pressed="true">วัน</button>
+              <button type="button" data-view="week" aria-pressed="false">สัปดาห์</button>
+              <button type="button" data-view="month" aria-pressed="false">เดือน</button>
+              <button type="button" data-view="year" aria-pressed="false">ปี</button>
+            </div>
+            <div class="nav-group">
+              <button id="prev" class="icon-button" type="button" aria-label="ช่วงก่อนหน้า" title="ช่วงก่อนหน้า">
+                <svg class="icon" aria-hidden="true"><use href="#i-chevron-left"></use></svg>
+              </button>
+              <button id="today" class="button small" type="button">วันนี้</button>
+              <button id="next" class="icon-button" type="button" aria-label="ช่วงถัดไป" title="ช่วงถัดไป">
+                <svg class="icon" aria-hidden="true"><use href="#i-chevron-right"></use></svg>
+              </button>
+            </div>
+            <button id="summarize-range" class="button small ghost" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg>
+              สรุปทั้งช่วง
+            </button>
+          </div>
+        </div>
+
+        <div class="timeline-meta">
+          <div class="legend" aria-label="ระดับความรุนแรง">
+            <span><i class="dot high" aria-hidden="true"></i>สูง</span>
+            <span><i class="dot medium" aria-hidden="true"></i>กลาง</span>
+            <span><i class="dot low" aria-hidden="true"></i>ต่ำ</span>
+            <span><i class="dot info" aria-hidden="true"></i>ข้อมูล</span>
+            <span><i class="dot none" aria-hidden="true"></i>ไม่มีเหตุการณ์</span>
+          </div>
+          <span id="event-count" class="event-count">—</span>
+        </div>
+
+        <p class="hint" id="timeline-hint">ลากบนเส้นเวลาในมุมมองวันเพื่อสรุปช่วงที่เลือก</p>
+        <div id="timeline" class="timeline"></div>
+        <div id="timeline-events" class="timeline-events" hidden>
+          <div class="events-head">
+            <h3>เหตุการณ์ในช่วงนี้</h3>
+            <span class="count" id="timeline-events-count"></span>
+          </div>
+          <div class="timeline-event-list" id="timeline-events-list"></div>
+        </div>
+      </section>
+
+      <section id="summary" class="panel summary-panel" aria-labelledby="summary-heading" hidden>
+        <div class="panel-head">
+          <div>
+            <h2 id="summary-heading">สรุปช่วงที่เลือก</h2>
+            <p class="range-label" id="summary-range"></p>
+          </div>
+          <button id="summary-close" class="icon-button" type="button" aria-label="ปิดสรุป" title="ปิด">
+            <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+          </button>
+        </div>
+        <pre id="summary-text"></pre>
+      </section>
     </div>
 
-    <section id="range-label" class="range-label muted"></section>
-    <section id="timeline" class="card timeline"></section>
-
-    <section id="summary" class="card summary" hidden>
-      <div class="row">
-        <h2>อธิบายช่วงนี้</h2>
-        <button id="summary-close" class="ghost">ปิด</button>
-      </div>
-      <pre id="summary-text"></pre>
-    </section>
-
-    <section class="card settings">
-      <h2>ตั้งค่า</h2>
-      <div class="setting-row">
-        <label>ตรวจทุก (วินาที)
-          <input id="interval" type="number" min="10" max="3600">
-        </label>
-        <label>เก็บข้อมูล (วัน)
-          <input id="retention" type="number" min="1" max="3650">
-        </label>
-        <label class="check">
-          <input id="public-ip" type="checkbox"> เก็บ Public IP
-        </label>
-      </div>
-      <div class="row">
-        <button id="save-settings">บันทึก</button>
-        <span id="save-status" class="muted"></span>
-        <button id="quit-app" class="danger">ออกจากโปรแกรม</button>
-      </div>
-    </section>
+    <footer class="page-foot">
+      <span>ข้อมูลถูกเก็บไว้ในเครื่องนี้เท่านั้น</span>
+      <span id="foot-state">—</span>
+    </footer>
   </main>
 
-  <aside id="detail" class="detail" hidden>
-    <div class="row">
-      <h2 id="detail-title"></h2>
-      <button id="detail-close" class="ghost">ปิด</button>
+  <div id="drawer-scrim" class="drawer-scrim" hidden></div>
+  <aside id="detail" class="drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title" hidden>
+    <div class="drawer-head">
+      <div class="drawer-heading">
+        <span id="detail-severity" class="severity-badge">—</span>
+        <h2 id="detail-title"></h2>
+        <p id="detail-time" class="drawer-time"></p>
+      </div>
+      <button id="detail-close" class="icon-button" type="button" aria-label="ปิดรายละเอียด" title="ปิด">
+        <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
     </div>
-    <div id="detail-time" class="muted"></div>
-    <p id="detail-narrative"></p>
-    <h3>หลักฐาน</h3>
-    <pre id="detail-evidence"></pre>
+    <div class="drawer-body">
+      <p id="detail-narrative" class="narrative"></p>
+      <p id="detail-details" class="drawer-details"></p>
+      <dl class="detail-meta" id="detail-meta"></dl>
+      <h3>หลักฐาน</h3>
+      <pre id="detail-evidence"></pre>
+    </div>
   </aside>
+
+  <div id="boot-notice" class="notice" hidden>
+    <div class="notice-card" role="alertdialog" aria-labelledby="notice-title" aria-describedby="notice-message">
+      <span class="notice-icon" aria-hidden="true">
+        <svg class="icon"><use href="#i-alert"></use></svg>
+      </span>
+      <h2 id="notice-title"></h2>
+      <p id="notice-message"></p>
+      <button id="notice-action" class="button" type="button" hidden></button>
+    </div>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>
