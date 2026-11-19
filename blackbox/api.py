@@ -5,7 +5,7 @@ import os
 import secrets
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -53,12 +53,12 @@ def load_or_create_token(data_dir: Path) -> str:
 
 
 class SecurityMiddleware:
-    """Security enforcement:
-    1. Validates Host header against allowed local hosts (DNS rebinding defense).
-    2. Validates Origin and Referer headers against allowed local origins.
-    3. Enforces token authentication via Bearer, X-API-Token, or query parameter.
-    4. CORS is intentionally not enabled.
+    """ตรวจ Host/Origin/Referer และ token ก่อนปล่อย request เข้า API
+
+    ใช้กับ local API เท่านั้น: bind 127.0.0.1, ไม่เปิด CORS
     """
+
+    _LOCAL_SCHEMES = {"pywebview", "app", "file", ""}
 
     def __init__(
         self,
@@ -76,78 +76,73 @@ class SecurityMiddleware:
             return
 
         headers = dict(scope.get("headers", []))
-
-        # 1. Host header validation
-        raw_host = headers.get(b"host", b"").decode("ascii", errors="replace")
-        host = raw_host.split(":")[0].lower() if raw_host else ""
-        if not host or host not in self.allowed_hosts:
-            response = JSONResponse(
-                {"detail": "Forbidden: Invalid Host header"}, status_code=403
+        if not self._host_ok(headers):
+            await self._reject(
+                scope, receive, send, 403, "Forbidden: Invalid Host header"
             )
-            await response(scope, receive, send)
             return
-
-        # 2. Origin header validation
-        raw_origin = headers.get(b"origin", b"").decode("utf-8", errors="replace")
-        if raw_origin and raw_origin != "null":
-            parsed = urlparse(raw_origin)
-            if parsed.scheme not in ("pywebview", "app", "file", ""):
-                orig_host = parsed.hostname.lower() if parsed.hostname else ""
-                if not orig_host or orig_host not in self.allowed_hosts:
-                    response = JSONResponse(
-                        {"detail": "Forbidden: Untrusted Origin"}, status_code=403
-                    )
-                    await response(scope, receive, send)
-                    return
-
-        # 3. Referer header validation
-        raw_referer = headers.get(b"referer", b"").decode("utf-8", errors="replace")
-        if raw_referer:
-            parsed = urlparse(raw_referer)
-            if parsed.scheme not in ("pywebview", "app", "file", ""):
-                ref_host = parsed.hostname.lower() if parsed.hostname else ""
-                if not ref_host or ref_host not in self.allowed_hosts:
-                    response = JSONResponse(
-                        {"detail": "Forbidden: Untrusted Referer"}, status_code=403
-                    )
-                    await response(scope, receive, send)
-                    return
-
-        # 4. Exemption for liveness probe
-        path = scope.get("path", "")
-        if path == "/health":
+        if not self._url_ok(self._header(headers, b"origin"), allow_null=True):
+            await self._reject(
+                scope, receive, send, 403, "Forbidden: Untrusted Origin"
+            )
+            return
+        if not self._url_ok(self._header(headers, b"referer")):
+            await self._reject(
+                scope, receive, send, 403, "Forbidden: Untrusted Referer"
+            )
+            return
+        if scope.get("path") == "/health":
             await self.app(scope, receive, send)
             return
+        if not self._token_ok(headers, scope):
+            await self._reject(
+                scope, receive, send, 401, "Unauthorized: Invalid or missing token"
+            )
+            return
+        await self.app(scope, receive, send)
 
-        # 5. Token authentication
-        auth = headers.get(b"authorization", b"").decode("utf-8", errors="replace")
-        api_token = headers.get(b"x-api-token", b"").decode("utf-8", errors="replace")
+    @staticmethod
+    def _header(headers: dict[bytes, bytes], name: bytes) -> str:
+        return headers.get(name, b"").decode("utf-8", errors="replace")
 
-        query_string = scope.get("query_string", b"").decode("utf-8", errors="replace")
-        query_token = ""
-        if "token=" in query_string:
-            for part in query_string.split("&"):
-                if part.startswith("token="):
-                    query_token = part[6:]
-                    break
+    def _host_ok(self, headers: dict[bytes, bytes]) -> bool:
+        raw = self._header(headers, b"host")
+        host = raw.split(":")[0].lower() if raw else ""
+        return bool(host and host in self.allowed_hosts)
 
-        provided = ""
+    def _url_ok(self, raw: str, *, allow_null: bool = False) -> bool:
+        if not raw or (allow_null and raw == "null"):
+            return True
+        parsed = urlparse(raw)
+        if parsed.scheme in self._LOCAL_SCHEMES:
+            return True
+        host = parsed.hostname.lower() if parsed.hostname else ""
+        return bool(host and host in self.allowed_hosts)
+
+    def _token_ok(self, headers: dict[bytes, bytes], scope: dict[str, Any]) -> bool:
+        auth = self._header(headers, b"authorization")
+        api_token = self._header(headers, b"x-api-token")
         if auth.startswith("Bearer "):
             provided = auth[7:].strip()
         elif api_token:
             provided = api_token.strip()
-        elif query_token:
-            provided = query_token.strip()
-
-        if not provided or not hmac.compare_digest(provided, self.token):
-            response = JSONResponse(
-                {"detail": "Unauthorized: Invalid or missing token"},
-                status_code=401,
+        else:
+            query = parse_qs(
+                scope.get("query_string", b"").decode("utf-8", errors="replace")
             )
-            await response(scope, receive, send)
-            return
+            provided = (query.get("token") or [""])[0].strip()
+        return bool(provided) and hmac.compare_digest(provided, self.token)
 
-        await self.app(scope, receive, send)
+    @staticmethod
+    async def _reject(
+        scope: dict[str, Any],
+        receive: Any,
+        send: Any,
+        status_code: int,
+        detail: str,
+    ) -> None:
+        response = JSONResponse({"detail": detail}, status_code=status_code)
+        await response(scope, receive, send)
 
 
 api_router = APIRouter(prefix="/api")
