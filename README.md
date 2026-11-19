@@ -85,14 +85,17 @@
   - ถ้า ICMP ถูกบล็อกจะบันทึกเป็น `network`; การ fallback TCP/DNS เป็นงาน Phase 1
   - หน้าจอ/tray เป็น Phase 2
 
-## Phase 1 (กำลังทำ)
+## Phase 1 (เสร็จแล้ว)
 
-- `blackbox/events/rules.py` — gateway_down, internet_down, dns_fail, dns_slow, wifi_drop, latency_spike
+- `blackbox/events/rules.py` — gateway_down, internet_down, dns_fail, dns_slow, wifi_drop, latency_spike, packet_loss, new_device, public_ip_change, interface_change
 - `blackbox/store/events.py` — open/close/find open event
 - **เชื่อม `runner.py` แล้ว** — ประเมิน rules หลังจบแต่ละรอบและเปิด/ปิด event
 - `packet_loss` window 5 นาที (≥30 packets) — เชื่อม runner แล้ว
 - `show recent` แสดง event ที่เปิด/ปิดแล้ว
-- เหลือ: new_device, public_ip_change, interface_change, narrator
+- `new_device` — ตรวจจับ MAC ใหม่จากการ sweep ARP passive และเปิด event
+- `public_ip_change` — บันทึก Public IP ใน meta และเปิด event เมื่อ IP เปลี่ยน
+- `interface_change` — ตรวจจับการเปลี่ยน gateway/interface และเปิด event
+- `blackbox/events/narrator.py` — สรุปเหตุการณ์เป็นภาษาคนจาก event + evidence (104 tests passed)
 
 ## เอกสาร
 

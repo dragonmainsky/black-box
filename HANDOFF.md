@@ -6,9 +6,9 @@
 ## Snapshot
 
 - Branch: `phase-0`
-- HEAD: `57aecc4`
+- HEAD: `b6ee481`
 - Remote: ไม่มี (local only)
-- Tests: **87 passed** (2026-11-19)
+- Tests: **104 passed** (2026-11-19)
 - Python: `.venv\Scripts\python.exe` (3.14.10)
 
 ## อ่านตามลำดับ
@@ -21,35 +21,26 @@
 ## สิ่งที่เสร็จแล้ว
 
 - Phase 0: probes + SQLite + Alembic + CLI + retention/rollup + `monitor_gap`
-- Phase 1: rules engine + runner integration
+- Phase 1: rules engine + runner integration + event store
   - `gateway_down`, `internet_down`, `dns_fail`, `dns_slow`,
     `wifi_drop`, `latency_spike`, `packet_loss`
+  - `new_device`: `upsert_devices` คืน MAC ใหม่ และ runner เปิด event `new_device`
+  - `public_ip_change`: เก็บ baseline IP ใน `meta` และเปิด event เมื่อ IP เปลี่ยน
+  - `interface_change`: เปิด event เมื่อ interface หรือ gateway เปลี่ยน โดยอิงจาก meta/probes
+  - `narrator`: `blackbox/events/narrator.py` สรุปเหตุการณ์เป็นภาษาคนจาก event + evidence
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 87
+- Tests: 104 passed
 
-## งานถัดไป (ทำทีละข้อ, TDD, commit ทุกข้อ)
+## งานถัดไป (Phase 2)
 
-1. **`new_device`**
-   - `upsert_devices` ควรคืน MAC ที่เพิ่งเห็นครั้งแรก
-   - runner เปิด event `new_device` (severity low/medium)
-   - test ด้วย ARP fixture; passive ARP เท่านั้น
-   - ระวัง: `arp -a` แสดงทุก adapter (deferred minor #9)
-
-2. **`public_ip_change`**
-   - เก็บ IP ก่อนหน้าใน `meta` หรือ query probe ล่าสุด
-   - เปิด event เมื่อ IP เปลี่ยน; public IP probe default off
-
-3. **`interface_change`**
-   - เปิด event เมื่อ gateway/interface เปลี่ยน
-   - ใช้ `interface` ที่บันทึกใน probes
-
-4. **narrator**
-   - สรุปเหตุการณ์เป็นภาษาคนจาก event + evidence
-   - ยังไม่ต้องต่อ UI; ทำเป็นฟังก์ชัน pure + tests ก่อน
-
-5. อัปเดต `README.md` และ skill (`home-network-black-box`) + commit
+1. **CLI / Timeline สรุปภาษาคน**
+   - นำ `narrator` ไปใช้แสดงผลใน `blackbox show recent` หรือ command สรุปสถานะ
+2. **UI Launcher / Tray (Phase 2)**
+   - System tray icon และหน้าต่างสรุปสถานะ
+3. **ISP Evidence Pack / Report (Phase 3)**
+   - สร้างรายงานสรุปประวัติสำหรับส่งแจ้ง ISP
 
 ## ข้อจำกัดสำคัญ
 
