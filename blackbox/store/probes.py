@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from sqlalchemy import insert, select
 from sqlalchemy.engine import Engine
@@ -42,6 +43,46 @@ def insert_probes(engine: Engine, results: Iterable[ProbeResult], ts: datetime) 
     with engine.begin() as conn:
         conn.execute(insert(probes), rows)
     return len(rows)
+
+
+@dataclass(frozen=True)
+class PingLoss:
+    sent: int
+    recv: int
+    loss_pct: float
+
+
+def ping_window_loss(
+    engine: Engine, targets: Sequence[str], since: datetime
+) -> PingLoss:
+    targets = tuple(dict.fromkeys(targets))
+    if not targets:
+        return PingLoss(0, 0, 0.0)
+    with engine.connect() as conn:
+        rows = (
+            conn.execute(
+                select(probes.c.detail).where(
+                    probes.c.probe == "ping",
+                    probes.c.target.in_(targets),
+                    probes.c.ts >= _iso(since),
+                )
+            )
+            .scalars()
+            .all()
+        )
+    sent = 0
+    recv = 0
+    for raw in rows:
+        if not raw:
+            continue
+        try:
+            detail = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        sent += int(detail.get("sent") or 0)
+        recv += int(detail.get("recv") or 0)
+    loss_pct = round(100.0 * (sent - recv) / sent, 1) if sent else 0.0
+    return PingLoss(sent=sent, recv=recv, loss_pct=loss_pct)
 
 
 def recent_probes(engine: Engine, limit: int = 50) -> list[dict]:

@@ -28,6 +28,11 @@ _RULES: dict[str, tuple[str, str, str]] = {
         "Latency พุ่ง",
         "ค่า latency สูงกว่าปกติเกิน 3 เท่า",
     ),
+    "packet_loss": (
+        "high",
+        "Packet loss สูง",
+        "อัตราแพ็กเก็ตหายเกิน 5% ใน 5 นาที",
+    ),
 }
 
 
@@ -112,7 +117,12 @@ class RuleEngine:
         )
 
     def evaluate(
-        self, results: Sequence[ProbeResult], now: datetime
+        self,
+        results: Sequence[ProbeResult],
+        now: datetime,
+        *,
+        packet_loss_pct: float | None = None,
+        packet_loss_samples: int = 0,
     ) -> list[EventAction]:
         actions: list[EventAction] = []
 
@@ -303,5 +313,19 @@ class RuleEngine:
                     )
                     if action:
                         actions.append(action)
+
+        if packet_loss_pct is not None:
+            evidence = {
+                "loss_pct": packet_loss_pct,
+                "samples": packet_loss_samples,
+            }
+            if packet_loss_samples >= 30 and packet_loss_pct > 5:
+                action = self._open_action("packet_loss", evidence, now)
+                if action:
+                    actions.append(action)
+            else:
+                action = self._close_action("packet_loss", evidence, now)
+                if action:
+                    actions.append(action)
 
         return actions

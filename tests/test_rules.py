@@ -128,3 +128,31 @@ def test_no_duplicate_open_event():
     fail = [ping(GW, False)]
     evaluate(engine, fail, 3)
     assert evaluate(engine, fail) == []
+
+
+def test_packet_loss_opens_after_threshold():
+    engine = RuleEngine()
+    actions = engine.evaluate(
+        [], NOW, packet_loss_pct=10.0, packet_loss_samples=40
+    )
+    assert [a.type for a in actions] == ["packet_loss"]
+
+
+def test_packet_loss_requires_enough_samples():
+    engine = RuleEngine()
+    assert (
+        engine.evaluate(
+            [], NOW, packet_loss_pct=10.0, packet_loss_samples=29
+        )
+        == []
+    )
+
+
+def test_packet_loss_closes_when_normal():
+    engine = RuleEngine()
+    engine.evaluate([], NOW, packet_loss_pct=10.0, packet_loss_samples=40)
+    actions = engine.evaluate(
+        [], NOW, packet_loss_pct=1.0, packet_loss_samples=40
+    )
+    assert [a.type for a in actions] == ["packet_loss"]
+    assert actions[0].action == "close"

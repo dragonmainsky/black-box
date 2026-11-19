@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import time
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable
 
 from sqlalchemy.engine import Engine
@@ -25,7 +25,7 @@ from blackbox.store.events import (
     recent_events as store_recent_events,
 )
 from blackbox.store.meta import meta_get, meta_set
-from blackbox.store.probes import insert_probes
+from blackbox.store.probes import insert_probes, ping_window_loss
 from blackbox.store.retention import run_maintenance
 
 
@@ -204,7 +204,15 @@ class ProbeRunner:
 
         results = self._stamp(results, info)
         insert_probes(self.engine, results, now)
-        actions = rules.evaluate(results, now)
+        window = ping_window_loss(
+            self.engine, self.config.targets, now - timedelta(minutes=5)
+        )
+        actions = rules.evaluate(
+            results,
+            now,
+            packet_loss_pct=window.loss_pct,
+            packet_loss_samples=window.sent,
+        )
         if actions:
             apply_actions(self.engine, actions)
         return results

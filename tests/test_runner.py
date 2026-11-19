@@ -208,6 +208,23 @@ def test_run_once_opens_dns_fail_event(tmp_path):
     assert find_open_event(runner.engine, "dns_fail") is not None
 
 
+def test_run_once_opens_packet_loss_event(tmp_path):
+    from blackbox.probes.netif import InterfaceInfo
+
+    class InternetLoss:
+        def send(self, target, timeout_ms):
+            return 10.0 if target == "192.168.1.1" else None
+
+    runner = _runner(
+        tmp_path,
+        interface_fn=lambda: InterfaceInfo("Ethernet", 5, "192.168.1.1", False),
+        ping_sender=InternetLoss(),
+    )
+    for _ in range(10):
+        runner.run_once(BASE)
+    assert find_open_event(runner.engine, "packet_loss") is not None
+
+
 def test_summarize_cycle_counts():
     results = [
         ProbeResult(probe="ping", target="1.1.1.1", ok=True),
