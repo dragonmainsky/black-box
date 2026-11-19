@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from blackbox.probe_types import ProbeResult
+from blackbox.winio import decode_console
 
 RunFn = Callable[[], tuple[int, str, str]]
 
@@ -47,12 +48,13 @@ def _run_arp() -> tuple[int, str, str]:
     result = subprocess.run(
         ["arp", "-a"],
         capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
         timeout=5,
     )
-    return result.returncode, result.stdout, result.stderr
+    return (
+        result.returncode,
+        decode_console(result.stdout),
+        decode_console(result.stderr),
+    )
 
 
 def probe_arp(

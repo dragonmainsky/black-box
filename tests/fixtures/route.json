@@ -1,14 +1,23 @@
 [
   {
+    "InterfaceAlias": "VPN",
+    "InterfaceIndex": 20,
+    "NextHop": "0.0.0.0",
+    "RouteMetric": 0,
+    "InterfaceMetric": 1
+  },
+  {
     "InterfaceAlias": "Wi-Fi",
     "InterfaceIndex": 12,
     "NextHop": "192.168.1.1",
-    "RouteMetric": 50
+    "RouteMetric": 0,
+    "InterfaceMetric": 55
   },
   {
     "InterfaceAlias": "Ethernet",
     "InterfaceIndex": 5,
     "NextHop": "192.168.1.1",
-    "RouteMetric": 25
+    "RouteMetric": 0,
+    "InterfaceMetric": 25
   }
 ]
