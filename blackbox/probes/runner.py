@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
+from sqlalchemy import select
 from sqlalchemy.engine import Engine
 
 from blackbox.config import Config
@@ -28,6 +29,7 @@ from blackbox.store.events import (
 from blackbox.store.meta import meta_get, meta_set
 from blackbox.store.probes import insert_probes, ping_window_loss
 from blackbox.store.retention import run_maintenance
+from blackbox.store.tables import probes
 
 
 def summarize_cycle(results: list[ProbeResult]) -> str:
@@ -76,14 +78,59 @@ class ProbeRunner:
         self._last_run: dict[str, datetime] = {}
         self._rules: RuleEngine | None = None
 
-    def _get_interface(self, now: datetime) -> InterfaceInfo | None:
+    def _get_interface(
+        self, now: datetime, *, force_refresh: bool = False
+    ) -> InterfaceInfo | None:
         if (
-            self._interface_checked_at is None
+            force_refresh
+            or self._interface_checked_at is None
             or (now - self._interface_checked_at).total_seconds() >= 300
         ):
             self._interface = self.interface_fn()
             self._interface_checked_at = now
         return self._interface
+
+    def _check_interface_change(
+        self, info: InterfaceInfo | None, now: datetime
+    ) -> None:
+        if info is None:
+            return
+        last_alias = meta_get(self.engine, "last_interface")
+        last_gw = meta_get(self.engine, "last_gateway")
+
+        if last_alias is None:
+            with self.engine.connect() as conn:
+                row = conn.execute(
+                    select(probes.c.interface)
+                    .where(probes.c.interface.is_not(None))
+                    .order_by(probes.c.id.desc())
+                    .limit(1)
+                ).first()
+                if row and row[0]:
+                    last_alias = row[0]
+
+        if last_alias is not None:
+            gw_changed = last_gw is not None and last_gw != (info.gateway or "")
+            if last_alias != info.alias or gw_changed:
+                open_event(
+                    self.engine,
+                    event_type="interface_change",
+                    severity="low",
+                    title="เปลี่ยนอินเทอร์เฟซ",
+                    details=f"เปลี่ยนจาก {last_alias} เป็น {info.alias}",
+                    evidence={
+                        "old_interface": last_alias,
+                        "new_interface": info.alias,
+                        "old_gateway": last_gw,
+                        "new_gateway": info.gateway,
+                    },
+                    ts=now,
+                )
+
+        if last_alias != info.alias:
+            meta_set(self.engine, "last_interface", info.alias)
+        if last_gw != (info.gateway or ""):
+            meta_set(self.engine, "last_gateway", info.gateway or "")
 
     def _sender(self) -> EchoSender:
         if self.ping_sender is None:
@@ -132,7 +179,8 @@ class ProbeRunner:
     def _run(
         self, now: datetime, *, force_all: bool, update_last_cycle: bool
     ) -> list[ProbeResult]:
-        info = self._get_interface(now)
+        info = self._get_interface(now, force_refresh=force_all)
+        self._check_interface_change(info, now)
         alias = info.alias if info else None
         rules = self._ensure_rules(info)
         results: list[ProbeResult] = []

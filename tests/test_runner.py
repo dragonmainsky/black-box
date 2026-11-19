@@ -334,3 +334,70 @@ def test_public_ip_change_opens_event_when_ip_changes(tmp_path):
     assert events[0]["severity"] == "low"
     assert events[0]["evidence"] == {"old_ip": "203.0.113.1", "new_ip": "203.0.113.99"}
     assert meta_get(engine, "last_public_ip") == "203.0.113.99"
+
+
+def test_interface_change_opens_event(tmp_path):
+    from blackbox.probes.netif import InterfaceInfo
+
+    current_info = [InterfaceInfo("Ethernet", 5, "192.168.1.1", False)]
+    runner = _runner(tmp_path, interface_fn=lambda: current_info[0])
+
+    # First cycle: records baseline interface, no event
+    runner.run_once(BASE)
+    assert meta_get(runner.engine, "last_interface") == "Ethernet"
+    assert [e for e in runner.recent_events() if e["type"] == "interface_change"] == []
+
+    # Second cycle: interface changed -> opens interface_change event
+    current_info[0] = InterfaceInfo("Wi-Fi", 19, "192.168.2.1", True)
+    runner.run_once(BASE + timedelta(minutes=6))
+    events = [e for e in runner.recent_events() if e["type"] == "interface_change"]
+    assert len(events) == 1
+    assert events[0]["severity"] == "low"
+    assert events[0]["evidence"] == {
+        "old_interface": "Ethernet",
+        "new_interface": "Wi-Fi",
+        "old_gateway": "192.168.1.1",
+        "new_gateway": "192.168.2.1",
+    }
+    assert meta_get(runner.engine, "last_interface") == "Wi-Fi"
+
+
+def test_interface_change_uses_probes_fallback(tmp_path):
+    from blackbox.probes.netif import InterfaceInfo
+    from blackbox.store.probes import insert_probes
+
+    engine = create_engine(tmp_path)
+    init_db(engine)
+    # Pre-seed probes table with an Ethernet probe, but no meta
+    insert_probes(
+        engine,
+        [ProbeResult(probe="ping", target="1.1.1.1", ok=True, interface="Ethernet")],
+        BASE,
+    )
+    assert meta_get(engine, "last_interface") is None
+
+    cfg = Config(data_dir=tmp_path)
+    runner = ProbeRunner(
+        engine,
+        cfg,
+        interface_fn=lambda: InterfaceInfo("Wi-Fi", 19, "192.168.1.1", True),
+        dns_servers_fn=lambda alias: ["1.1.1.1"],
+        ping_sender=type("S", (), {"send": lambda self, t, ms: 10.0})(),
+        dns_resolver_fn=lambda r, d, t: type(
+            "A",
+            (),
+            {
+                "resolver": r,
+                "rcode": "NOERROR",
+                "answers": ["1.2.3.4"],
+                "latency_ms": 5.0,
+            },
+        )(),
+        wifi_run_fn=lambda: (1, "", "no wifi"),
+        arp_run_fn=lambda: (0, "", ""),
+    )
+    runner.run_once(BASE + timedelta(minutes=1))
+    events = [e for e in runner.recent_events() if e["type"] == "interface_change"]
+    assert len(events) == 1
+    assert events[0]["evidence"]["old_interface"] == "Ethernet"
+    assert events[0]["evidence"]["new_interface"] == "Wi-Fi"
