@@ -4,10 +4,10 @@ import argparse
 import sys
 from datetime import datetime, timezone
 
-from blackbox.config import Config
 from blackbox.events.narrator import narrate_event
 from blackbox.paths import db_path, resolve_data_dir
 from blackbox.probes.runner import ProbeRunner
+from blackbox.settings import config_from_settings, load_settings
 from blackbox.status import SystemStatus, get_system_status
 from blackbox.store.db import create_engine, init_db
 from blackbox.store.events import recent_events
@@ -150,11 +150,6 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         data_dir = resolve_data_dir(getattr(args, "data_dir", None))
-        config = Config(data_dir=data_dir)
-        interval = getattr(args, "interval", None)
-        if interval is not None:
-            config = config.with_base_interval(interval)
-        config.validate()
 
         if args.command == "desktop":
             from blackbox.desktop import run_desktop
@@ -168,6 +163,12 @@ def main(argv: list[str] | None = None) -> int:
 
         engine = create_engine(data_dir)
         init_db(engine)
+        settings = load_settings(engine)
+        config = config_from_settings(data_dir, settings)
+        interval = getattr(args, "interval", None)
+        if interval is not None:
+            config = config.with_base_interval(interval)
+        config.validate()
 
         if args.command == "db":
             if args.db_command == "init":

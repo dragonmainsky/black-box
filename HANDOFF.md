@@ -8,10 +8,10 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **145 passed** (2026-11-19)
+- Tests: **154 passed** (2026-11-19)
 - Python: รัน `.\setup.bat` ครั้งแรก เพื่อสร้าง `.venv` (ไม่มี `.venv` ใน repo)
 
-> เริ่มงาน: **Phase 2 ข้อ 4 (Notification) เสร็จแล้ว** — เริ่ม Settings UI / Packaging
+> เริ่มงาน: **Phase 2 ข้อ 5 (Settings UI) เสร็จแล้ว** — เริ่ม Packaging / Phase 3
 
 ## อ่านตามลำดับ
 
@@ -33,7 +33,7 @@
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 145 passed
+- Tests: 154 passed
 - Phase 2 ข้อ 1 (เสร็จแล้ว):
   - `show recent` แสดง `narrate_event()` ใต้แถว event
   - เพิ่ม `show status` สรุปสถานะสุขภาพ (ปกติ/เตือน/วิกฤต), ข้อมูลเครือข่าย, เหตุการณ์ที่กำลังเกิด, และประวัติล่าสุด
@@ -55,6 +55,12 @@
   - `ProbeRunner.on_event` callback หลัง apply event actions
   - tray `notify` เฉพาะ event `open` + severity `high`
   - Ctrl+C / Ctrl+Break: `SetConsoleCtrlHandler` + main thread `wait_for_stop`
+- Phase 2 ข้อ 5 (เสร็จแล้ว):
+  - `blackbox/settings.py` — persist ใน `meta` (`settings.*`)
+  - `GET/PUT /api/settings` + validation
+  - UI card สำหรับ interval / retention / public IP
+  - `ProbeRunner.update_config` — มีผลรอบถัดไปโดยไม่ต้องรีสตาร์ท
+  - autostart ยังไม่ทำ (จะทำตอน packaging)
 
 ## งานถัดไป (Phase 2)
 
@@ -64,7 +70,7 @@
 2. [x] **Local API (FastAPI)** (เสร็จแล้ว)
 3. [x] **Launcher + tray + browser UI** (เสร็จแล้ว)
 4. [x] **Notification** — แจ้งเตือน event ระดับ high (เสร็จแล้ว)
-5. **Settings UI** — interval / retention / public IP / autostart
+5. [x] **Settings UI** — interval / retention / public IP (เสร็จแล้ว; autostart ตอน packaging)
 6. **Packaging** — onefile + portable zip + clean Windows test
 7. **Phase 3: evidence pack / report**
 

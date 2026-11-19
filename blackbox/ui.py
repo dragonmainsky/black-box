@@ -24,6 +24,16 @@ INDEX_HTML = """<!doctype html>
     .critical { color: #e74c3c; }
     ul { padding-left: 20px; margin: 0; }
     li { margin: 8px 0; }
+    label { display: block; margin: 10px 0; }
+    input {
+      background: #0f1115; color: #e6e6e6; border: 1px solid #333;
+      border-radius: 6px; padding: 6px 8px;
+    }
+    input[type="number"] { width: 110px; }
+    button {
+      background: #2ecc71; color: #0f1115; border: 0; border-radius: 6px;
+      padding: 8px 14px; font-weight: 600; cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -40,6 +50,15 @@ INDEX_HTML = """<!doctype html>
     <ul id="events"><li class="muted">กำลังโหลด...</li></ul>
   </div>
 
+  <div class="card">
+    <h2>ตั้งค่า</h2>
+    <label>ตรวจทุก (วินาที) <input id="interval" type="number" min="10" max="3600"></label>
+    <label>เก็บข้อมูล (วัน) <input id="retention" type="number" min="1" max="3650"></label>
+    <label><input id="public-ip" type="checkbox"> เก็บ Public IP</label>
+    <button id="save-settings">บันทึก</button>
+    <span id="save-status" class="muted"></span>
+  </div>
+
   <script>
     const params = new URLSearchParams(location.search);
     const token = params.get("token") || sessionStorage.getItem("bb_token") || "";
@@ -51,8 +70,9 @@ INDEX_HTML = """<!doctype html>
     const detailsEl = document.getElementById("details");
     const eventsEl = document.getElementById("events");
 
-    async function api(path) {
-      const response = await fetch(path, { headers: { "X-API-Token": token } });
+    async function api(path, options = {}) {
+      const headers = { "X-API-Token": token, ...(options.headers || {}) };
+      const response = await fetch(path, { ...options, headers });
       if (!response.ok) throw new Error(await response.text());
       return response.json();
     }
@@ -100,6 +120,39 @@ INDEX_HTML = """<!doctype html>
       }
     }
 
+    async function loadSettings() {
+      const intervalEl = document.getElementById("interval");
+      const retentionEl = document.getElementById("retention");
+      const publicEl = document.getElementById("public-ip");
+      try {
+        const data = await api("/api/settings");
+        intervalEl.value = data.base_interval_s;
+        retentionEl.value = data.retention_days;
+        publicEl.checked = data.public_ip_enabled;
+      } catch (error) {
+        document.getElementById("save-status").textContent = String(error);
+      }
+    }
+
+    async function saveSettings() {
+      const statusEl = document.getElementById("save-status");
+      statusEl.textContent = "กำลังบันทึก...";
+      try {
+        await api("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            base_interval_s: Number(document.getElementById("interval").value),
+            retention_days: Number(document.getElementById("retention").value),
+            public_ip_enabled: document.getElementById("public-ip").checked,
+          }),
+        });
+        statusEl.textContent = "บันทึกแล้ว";
+      } catch (error) {
+        statusEl.textContent = "บันทึกไม่ได้: " + error;
+      }
+    }
+
     if (!token) {
       statusEl.textContent = "กรุณาเปิดจาก tray";
       statusEl.className = "status warning";
@@ -107,6 +160,8 @@ INDEX_HTML = """<!doctype html>
     } else {
       refresh();
       setInterval(refresh, 5000);
+      loadSettings();
+      document.getElementById("save-settings").addEventListener("click", saveSettings);
     }
   </script>
 </body>

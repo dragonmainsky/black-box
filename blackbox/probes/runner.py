@@ -139,6 +139,10 @@ class ProbeRunner:
             self.ping_sender = WindowsEchoSender()
         return self.ping_sender
 
+    def update_config(self, config: Config) -> None:
+        """ใช้ค่ารอบถัดไปโดยไม่ต้องรีสตาร์ท process"""
+        self.config = config
+
     def _ensure_rules(self, info: InterfaceInfo | None) -> RuleEngine:
         gateway = info.gateway if info else None
         wifi = bool(info and info.is_wifi)

@@ -2,7 +2,7 @@
 
 ตัวบันทึกสุขภาพอินเทอร์เน็ตในบ้าน — เฝ้า ping / DNS / Wi-Fi / ARP แล้วเก็บหลักฐานไว้ดูย้อนหลัง
 
-> **สถานะ:** Phase 2 บางส่วน — probes + rules + CLI + API + tray + browser UI; ยังไม่มี notification/settings
+> **สถานะ:** Phase 2 — probes + rules + CLI + API + tray + browser UI + settings; ยังไม่มี packaging/Phase 3
 
 ## เริ่มใช้งานใน VS Code
 
@@ -30,6 +30,7 @@
 ```
 
 > `desktop` เปิด tray + UI ใน default browser; ปิดแท็บไม่ปิดแอป (ออกที่ tray)
+> หน้า UI มีการ์ดตั้งค่า interval / retention / public IP — บันทึกลง DB และมีผลรอบถัดไป
 > ใช้ `--data-dir .\data` สำหรับเดโม/ทดสอบ; `--no-browser` สำหรับ smoke
 
 ถ้าไม่ระบุ `--data-dir` จะใช้ `%APPDATA%\BlackBox`

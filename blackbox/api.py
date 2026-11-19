@@ -4,14 +4,16 @@ import hmac
 import os
 import secrets
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from blackbox.events.narrator import narrate_event
+from blackbox.settings import Settings, load_settings, save_settings
 from blackbox.status import get_system_status
 from blackbox.store.events import get_open_events, recent_events
 from blackbox.store.probes import recent_probes
@@ -20,6 +22,12 @@ from blackbox.ui import INDEX_HTML
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
+
+
+class SettingsPayload(BaseModel):
+    base_interval_s: int = Field(default=30, ge=10, le=3600)
+    retention_days: int = Field(default=30, ge=1, le=3650)
+    public_ip_enabled: bool = False
 
 
 def token_path(data_dir: Path) -> Path:
@@ -188,11 +196,35 @@ def get_probes(
     return recent_probes(engine, limit=limit, probe=probe)
 
 
+@api_router.get("/settings")
+def get_settings(request: Request) -> dict[str, Any]:
+    engine: Engine = request.app.state.engine
+    return load_settings(engine).to_dict()
+
+
+@api_router.put("/settings")
+def put_settings(
+    payload: SettingsPayload, request: Request
+) -> dict[str, Any]:
+    engine: Engine = request.app.state.engine
+    settings = Settings(**payload.model_dump())
+    try:
+        save_settings(engine, settings)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    callback = getattr(request.app.state, "on_settings_changed", None)
+    if callback is not None:
+        callback(settings)
+    return settings.to_dict()
+
+
 def create_app(
     engine: Engine,
     token: str | None = None,
     data_dir: Path | None = None,
     allowed_hosts: set[str] | None = None,
+    on_settings_changed: Callable[[Settings], None] | None = None,
 ) -> FastAPI:
     if not token:
         if data_dir:
@@ -203,6 +235,7 @@ def create_app(
     app = FastAPI(title="Home Network Black Box API", version="0.1.0")
     app.state.engine = engine
     app.state.token = token
+    app.state.on_settings_changed = on_settings_changed
 
     @app.get("/health")
     def health() -> dict[str, bool]:

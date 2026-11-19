@@ -14,9 +14,9 @@ import uvicorn
 from PIL import Image, ImageDraw
 
 from blackbox.api import create_app, load_or_create_token
-from blackbox.config import Config
 from blackbox.paths import resolve_data_dir
 from blackbox.probes.runner import ProbeRunner
+from blackbox.settings import config_from_settings, load_settings
 from blackbox.store.db import create_engine, init_db
 
 _MUTEX_HANDLE: Any = None
@@ -116,11 +116,21 @@ def run_desktop(
     data = resolve_data_dir(str(data_dir) if data_dir else None)
     engine = create_engine(data)
     init_db(engine)
-    config = Config(data_dir=data)
-    config.validate()
+    settings = load_settings(engine)
+    config = config_from_settings(data, settings)
+
+    runner = ProbeRunner(engine, config)
+
+    def apply_settings(new_settings) -> None:
+        runner.update_config(config_from_settings(data, new_settings))
 
     token = load_or_create_token(data)
-    app = create_app(engine, token=token, data_dir=data)
+    app = create_app(
+        engine,
+        token=token,
+        data_dir=data,
+        on_settings_changed=apply_settings,
+    )
     port = port or free_port()
     server = uvicorn.Server(
         uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
@@ -165,7 +175,7 @@ def run_desktop(
                 "Home Network Black Box",
             )
 
-    runner = ProbeRunner(engine, config, on_event=notify_event)
+    runner.on_event = notify_event
 
     def start_runner(icon) -> None:
         threading.Thread(target=runner.run_forever, daemon=True).start()

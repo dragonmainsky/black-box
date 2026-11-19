@@ -406,3 +406,72 @@ def test_index_shell_is_public(tmp_path: Path):
 def test_api_requires_token(tmp_path: Path):
     client = _client(tmp_path)
     assert client.get("/api/status").status_code == 401
+
+
+def test_get_settings_requires_token(tmp_path: Path):
+    client = _client(tmp_path)
+    assert client.get("/api/settings").status_code == 401
+
+
+def test_get_settings_defaults(tmp_path: Path):
+    client = _client(tmp_path)
+    response = client.get(
+        "/api/settings", headers={"Authorization": f"Bearer {TOKEN}"}
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "base_interval_s": 30,
+        "retention_days": 30,
+        "public_ip_enabled": False,
+    }
+
+
+def test_put_settings_updates_and_persists(tmp_path: Path):
+    client = _client(tmp_path)
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    response = client.put(
+        "/api/settings",
+        headers=headers,
+        json={
+            "base_interval_s": 120,
+            "retention_days": 60,
+            "public_ip_enabled": True,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["base_interval_s"] == 120
+
+    again = client.get("/api/settings", headers=headers)
+    assert again.json()["base_interval_s"] == 120
+    assert again.json()["retention_days"] == 60
+    assert again.json()["public_ip_enabled"] is True
+
+
+def test_put_settings_rejects_invalid_interval(tmp_path: Path):
+    client = _client(tmp_path)
+    response = client.put(
+        "/api/settings",
+        headers={"Authorization": f"Bearer {TOKEN}"},
+        json={"base_interval_s": 5, "retention_days": 30, "public_ip_enabled": False},
+    )
+    assert response.status_code == 422
+
+
+def test_settings_callback_receives_update(tmp_path: Path):
+    engine = _make_engine(tmp_path)
+    seen = []
+    app = create_app(
+        engine,
+        token=TOKEN,
+        allowed_hosts={"testserver"},
+        on_settings_changed=seen.append,
+    )
+    client = TestClient(app)
+    response = client.put(
+        "/api/settings",
+        headers={"Authorization": f"Bearer {TOKEN}"},
+        json={"base_interval_s": 60, "retention_days": 30, "public_ip_enabled": False},
+    )
+    assert response.status_code == 200
+    assert len(seen) == 1
+    assert seen[0].base_interval_s == 60
