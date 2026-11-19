@@ -51,6 +51,18 @@
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
+## ผลทดสอบ Phase 0 (2026-11-19)
+
+- Unit tests: **45 passed**
+- probe จริงผ่าน: gateway, 1.1.1.1, 8.8.8.8, DNS, Wi-Fi, ARP
+- 10-minute loop: **117 probe rows**, 0 error, 0 gap event
+  - ping 63, dns 33, wifi 18, arp 3
+- ข้อจำกัดที่พบ:
+  - บาง driver ไม่ส่ง BSSID — probe จะข้าม field ที่หายไป
+  - ARP เป็น passive: อุปกรณ์ที่ไม่คุยกับเครื่องนี้จะไม่ปรากฏ
+  - ถ้า ICMP ถูกบล็อกจะบันทึกเป็น `network`; การ fallback TCP/DNS เป็นงาน Phase 1
+  - หน้าจอ/tray เป็น Phase 2
+
 ## เอกสาร
 
 - Design: `docs/superpowers/specs/2026-11-19-black-box-mvp-design.md`
