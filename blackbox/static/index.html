@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home Network Black Box</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Home Network Black Box</h1>
+      <div id="status-line" class="muted">กำลังโหลด...</div>
+    </div>
+    <div id="status-pill" class="pill">—</div>
+  </header>
+
+  <main class="wrap">
+    <section class="card status-card">
+      <div id="status" class="status">กำลังโหลด...</div>
+      <div id="details" class="muted"></div>
+    </section>
+
+    <section class="card toolbar">
+      <div class="tabs">
+        <button data-view="day" class="active">วัน</button>
+        <button data-view="week">สัปดาห์</button>
+        <button data-view="month">เดือน</button>
+        <button data-view="year">ปี</button>
+      </div>
+      <div class="nav">
+        <button id="prev" title="ก่อนหน้า">‹</button>
+        <button id="today">วันนี้</button>
+        <button id="next" title="ถัดไป">›</button>
+      </div>
+      <div class="filters">
+        <select id="filter-severity">
+          <option value="">ทุกระดับ</option>
+          <option value="high">สูง</option>
+          <option value="medium">กลาง</option>
+          <option value="low">ต่ำ</option>
+          <option value="info">ข้อมูล</option>
+        </select>
+        <select id="filter-type">
+          <option value="">ทุกประเภท</option>
+          <option value="gateway_down">gateway_down</option>
+          <option value="internet_down">internet_down</option>
+          <option value="dns_fail">dns_fail</option>
+          <option value="dns_slow">dns_slow</option>
+          <option value="packet_loss">packet_loss</option>
+          <option value="wifi_drop">wifi_drop</option>
+          <option value="latency_spike">latency_spike</option>
+          <option value="new_device">new_device</option>
+          <option value="public_ip_change">public_ip_change</option>
+          <option value="interface_change">interface_change</option>
+          <option value="monitor_gap">monitor_gap</option>
+        </select>
+      </div>
+    </section>
+
+    <div class="legend">
+      <span><i class="dot high"></i>สูง</span>
+      <span><i class="dot medium"></i>กลาง</span>
+      <span><i class="dot low"></i>ต่ำ</span>
+      <span><i class="dot info"></i>ข้อมูล</span>
+    </div>
+
+    <section id="range-label" class="range-label muted"></section>
+    <section id="timeline" class="card timeline"></section>
+
+    <section id="summary" class="card summary" hidden>
+      <div class="row">
+        <h2>อธิบายช่วงนี้</h2>
+        <button id="summary-close" class="ghost">ปิด</button>
+      </div>
+      <pre id="summary-text"></pre>
+    </section>
+
+    <section class="card settings">
+      <h2>ตั้งค่า</h2>
+      <div class="setting-row">
+        <label>ตรวจทุก (วินาที)
+          <input id="interval" type="number" min="10" max="3600">
+        </label>
+        <label>เก็บข้อมูล (วัน)
+          <input id="retention" type="number" min="1" max="3650">
+        </label>
+        <label class="check">
+          <input id="public-ip" type="checkbox"> เก็บ Public IP
+        </label>
+      </div>
+      <div class="row">
+        <button id="save-settings">บันทึก</button>
+        <span id="save-status" class="muted"></span>
+      </div>
+    </section>
+  </main>
+
+  <aside id="detail" class="detail" hidden>
+    <div class="row">
+      <h2 id="detail-title"></h2>
+      <button id="detail-close" class="ghost">ปิด</button>
+    </div>
+    <div id="detail-time" class="muted"></div>
+    <p id="detail-narrative"></p>
+    <h3>หลักฐาน</h3>
+    <pre id="detail-evidence"></pre>
+  </aside>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -169,6 +169,38 @@ def last_gap_start(engine: Engine) -> str | None:
         return row[0] if row else None
 
 
+def events_between(
+    engine: Engine,
+    start: datetime,
+    end: datetime,
+    event_type: str | None = None,
+    severity: str | None = None,
+) -> list[dict]:
+    query = select(events).where(
+        events.c.ts_start >= _iso(start),
+        events.c.ts_start < _iso(end),
+    )
+    if event_type:
+        query = query.where(events.c.type == event_type)
+    if severity:
+        query = query.where(events.c.severity == severity)
+    query = query.order_by(events.c.ts_start.asc()).limit(5000)
+
+    with engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+
+    out = []
+    for row in rows:
+        item = dict(row)
+        if isinstance(item.get("evidence"), str):
+            try:
+                item["evidence"] = json.loads(item["evidence"])
+            except (ValueError, TypeError):
+                pass
+        out.append(item)
+    return out
+
+
 def recent_events(
     engine: Engine, limit: int = 50, event_type: str | None = None
 ) -> list[dict]:

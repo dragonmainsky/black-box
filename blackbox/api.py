@@ -3,25 +3,29 @@ from __future__ import annotations
 import hmac
 import os
 import secrets
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.engine import Engine
 
 from blackbox.events.narrator import narrate_event
 from blackbox.settings import Settings, load_settings, save_settings
 from blackbox.status import get_system_status
-from blackbox.store.events import get_open_events, recent_events
-from blackbox.store.probes import recent_probes
-from blackbox.ui import INDEX_HTML
+from blackbox.store.events import events_between, get_open_events, recent_events
+from blackbox.store.probes import probes_between, recent_probes
+from blackbox.summary import summarize_events
+from blackbox.timeline import build_buckets
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
+STATIC_DIR = Path(__file__).with_name("static")
 
 
 class SettingsPayload(BaseModel):
@@ -100,7 +104,9 @@ class SecurityMiddleware:
                 scope, receive, send, 403, "Forbidden: Untrusted Referer"
             )
             return
-        if scope.get("path") in ("/health", "/"):
+        if scope.get("path") in ("/health", "/") or str(
+            scope.get("path", "")
+        ).startswith("/static/"):
             await self.app(scope, receive, send)
             return
         if not self._token_ok(headers, scope):
@@ -170,15 +176,26 @@ def get_events(
     limit: int = 50,
     type: str | None = None,
     open_only: bool = False,
+    severity: str | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
 ) -> list[dict[str, Any]]:
     engine: Engine = request.app.state.engine
     if open_only:
         evts = get_open_events(engine)
         if type:
             evts = [e for e in evts if e.get("type") == type]
+        if severity:
+            evts = [e for e in evts if e.get("severity") == severity]
         evts = evts[:limit]
+    elif start is not None and end is not None:
+        evts = events_between(
+            engine, start, end, event_type=type, severity=severity
+        )[:limit]
     else:
         evts = recent_events(engine, limit=limit, event_type=type)
+        if severity:
+            evts = [e for e in evts if e.get("severity") == severity]
 
     for e in evts:
         if "narrative" not in e:
@@ -186,13 +203,65 @@ def get_events(
     return evts
 
 
+@api_router.get("/timeline")
+def get_timeline(
+    request: Request,
+    start: datetime,
+    end: datetime,
+    bucket: str = "day",
+    type: str | None = None,
+    severity: str | None = None,
+) -> dict[str, Any]:
+    engine: Engine = request.app.state.engine
+    events = events_between(
+        engine, start, end, event_type=type, severity=severity
+    )
+    for event in events:
+        event["narrative"] = narrate_event(event)
+    try:
+        buckets = build_buckets(events, start, end, bucket)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "bucket": bucket,
+        "buckets": buckets,
+        "events": events,
+    }
+
+
+@api_router.get("/summary")
+def get_summary(
+    request: Request,
+    start: datetime,
+    end: datetime,
+    type: str | None = None,
+    severity: str | None = None,
+) -> dict[str, Any]:
+    engine: Engine = request.app.state.engine
+    events = events_between(
+        engine, start, end, event_type=type, severity=severity
+    )
+    return {
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "count": len(events),
+        "text": summarize_events(events),
+    }
+
+
 @api_router.get("/probes")
 def get_probes(
     request: Request,
     limit: int = 50,
     probe: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
 ) -> list[dict[str, Any]]:
     engine: Engine = request.app.state.engine
+    if since is not None and until is not None:
+        return probes_between(engine, since, until, probe=probe)[-limit:]
     return recent_probes(engine, limit=limit, probe=probe)
 
 
@@ -236,14 +305,15 @@ def create_app(
     app.state.engine = engine
     app.state.token = token
     app.state.on_settings_changed = on_settings_changed
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     @app.get("/health")
     def health() -> dict[str, bool]:
         return {"ok": True}
 
-    @app.get("/", response_class=HTMLResponse)
-    def index() -> str:
-        return INDEX_HTML
+    @app.get("/")
+    def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
     app.include_router(api_router)
     app.add_middleware(

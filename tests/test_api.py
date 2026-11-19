@@ -408,6 +408,13 @@ def test_api_requires_token(tmp_path: Path):
     assert client.get("/api/status").status_code == 401
 
 
+def test_static_assets_served(tmp_path: Path):
+    client = _client(tmp_path)
+    response = client.get("/static/app.js")
+    assert response.status_code == 200
+    assert "loadTimeline" in response.text
+
+
 def test_get_settings_requires_token(tmp_path: Path):
     client = _client(tmp_path)
     assert client.get("/api/settings").status_code == 401
@@ -475,3 +482,93 @@ def test_settings_callback_receives_update(tmp_path: Path):
     assert response.status_code == 200
     assert len(seen) == 1
     assert seen[0].base_interval_s == 60
+
+
+def test_timeline_returns_buckets_and_events(tmp_path: Path):
+    engine = _make_engine(tmp_path)
+    open_event(engine, "dns_fail", "high", "DNS ล่ม", "", {}, BASE)
+    app = create_app(engine, token=TOKEN, allowed_hosts={"testserver"})
+    client = TestClient(app)
+    response = client.get(
+        "/api/timeline",
+        params={
+            "start": "2026-11-19T11:00:00+00:00",
+            "end": "2026-11-19T13:00:00+00:00",
+            "bucket": "hour",
+        },
+        headers={"Authorization": f"Bearer {TOKEN}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["buckets"]) == 2
+    assert len(data["events"]) == 1
+    assert data["events"][0]["type"] == "dns_fail"
+    assert "narrative" in data["events"][0]
+
+
+def test_summary_returns_thai_text(tmp_path: Path):
+    engine = _make_engine(tmp_path)
+    open_event(
+        engine,
+        "dns_fail",
+        "high",
+        "DNS ล่ม",
+        "",
+        {"resolvers": ["1.1.1.1"]},
+        BASE,
+    )
+    app = create_app(engine, token=TOKEN, allowed_hosts={"testserver"})
+    client = TestClient(app)
+    response = client.get(
+        "/api/summary",
+        params={
+            "start": "2026-11-19T11:00:00+00:00",
+            "end": "2026-11-19T13:00:00+00:00",
+        },
+        headers={"Authorization": f"Bearer {TOKEN}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert "DNS" in data["text"]
+
+
+def test_events_filter_by_time_and_type(tmp_path: Path):
+    engine = _make_engine(tmp_path)
+    open_event(engine, "dns_fail", "high", "DNS", "", {}, BASE)
+    open_event(engine, "wifi_drop", "medium", "Wi-Fi", "", {}, BASE)
+    app = create_app(engine, token=TOKEN, allowed_hosts={"testserver"})
+    client = TestClient(app)
+    response = client.get(
+        "/api/events",
+        params={
+            "start": "2026-11-19T11:00:00+00:00",
+            "end": "2026-11-19T13:00:00+00:00",
+            "type": "wifi_drop",
+        },
+        headers={"Authorization": f"Bearer {TOKEN}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["type"] == "wifi_drop"
+
+
+def test_probes_since_and_until(tmp_path: Path):
+    engine = _make_engine(tmp_path)
+    insert_probes(
+        engine,
+        [ProbeResult(probe="ping", target="1.1.1.1", value=10.0, ok=True)],
+        BASE,
+    )
+    app = create_app(engine, token=TOKEN, allowed_hosts={"testserver"})
+    client = TestClient(app)
+    response = client.get(
+        "/api/probes",
+        params={
+            "since": "2026-11-19T11:00:00+00:00",
+            "until": "2026-11-19T13:00:00+00:00",
+        },
+        headers={"Authorization": f"Bearer {TOKEN}"},
+    )
+    assert response.status_code == 200
+    assert len(response.json()) == 1

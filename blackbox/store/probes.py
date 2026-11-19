@@ -85,6 +85,37 @@ def ping_window_loss(
     return PingLoss(sent=sent, recv=recv, loss_pct=loss_pct)
 
 
+def probes_between(
+    engine: Engine,
+    start: datetime,
+    end: datetime,
+    probe: str | None = None,
+    limit: int = 5000,
+) -> list[dict]:
+    query = select(probes).where(
+        probes.c.ts >= _iso(start),
+        probes.c.ts < _iso(end),
+    )
+    if probe:
+        query = query.where(probes.c.probe == probe)
+    query = query.order_by(probes.c.ts.asc()).limit(limit)
+
+    with engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+
+    out = []
+    for row in rows:
+        item = dict(row)
+        if isinstance(item.get("detail"), str):
+            try:
+                item["detail"] = json.loads(item["detail"])
+            except (ValueError, TypeError):
+                pass
+        item["ok"] = bool(item["ok"])
+        out.append(item)
+    return out
+
+
 def recent_probes(
     engine: Engine, limit: int = 50, probe: str | None = None
 ) -> list[dict]:

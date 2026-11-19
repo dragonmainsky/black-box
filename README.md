@@ -2,7 +2,7 @@
 
 ตัวบันทึกสุขภาพอินเทอร์เน็ตในบ้าน — เฝ้า ping / DNS / Wi-Fi / ARP แล้วเก็บหลักฐานไว้ดูย้อนหลัง
 
-> **สถานะ:** Phase 2 — probes + rules + CLI + API + tray + browser UI + settings; ยังไม่มี packaging/Phase 3
+> **สถานะ:** Phase 2 เสร็จ — probes + rules + CLI + API + tray + browser UI + timeline; ต่อไป packaging/Phase 3
 
 ## เริ่มใช้งานใน VS Code
 
@@ -30,6 +30,7 @@
 ```
 
 > `desktop` เปิด tray + UI ใน default browser; ปิดแท็บไม่ปิดแอป (ออกที่ tray)
+> UI: day/week/month/year, filter, คลิก event ดูหลักฐาน, ลากเลือกช่วง → อธิบายช่วงนี้
 > หน้า UI มีการ์ดตั้งค่า interval / retention / public IP — บันทึกลง DB และมีผลรอบถัดไป
 > ใช้ `--data-dir .\data` สำหรับเดโม/ทดสอบ; `--no-browser` สำหรับ smoke
 
