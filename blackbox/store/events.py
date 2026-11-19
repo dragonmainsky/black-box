@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
 from .tables import events
@@ -33,6 +33,61 @@ def insert_gap(
             )
         )
         return int(result.inserted_primary_key[0])
+
+
+def open_event(
+    engine: Engine,
+    event_type: str,
+    severity: str,
+    title: str,
+    details: str,
+    evidence: dict,
+    ts: datetime,
+) -> int:
+    with engine.begin() as conn:
+        result = conn.execute(
+            insert(events).values(
+                ts_start=_iso(ts),
+                type=event_type,
+                severity=severity,
+                title=title,
+                details=details,
+                evidence=json.dumps(evidence, ensure_ascii=False),
+            )
+        )
+        return int(result.inserted_primary_key[0])
+
+
+def find_open_event(engine: Engine, event_type: str) -> dict | None:
+    with engine.connect() as conn:
+        row = (
+            conn.execute(
+                select(events)
+                .where(
+                    events.c.type == event_type,
+                    events.c.ts_end.is_(None),
+                )
+                .order_by(events.c.id.desc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+    if row is None:
+        return None
+    item = dict(row)
+    if item.get("evidence"):
+        item["evidence"] = json.loads(item["evidence"])
+    return item
+
+
+def close_event(engine: Engine, event_id: int, ts: datetime) -> None:
+    with engine.begin() as conn:
+        conn.execute(
+            update(events)
+            .where(events.c.id == event_id)
+            .values(ts_end=_iso(ts))
+        )
 
 
 def last_gap_start(engine: Engine) -> str | None:

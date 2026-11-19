@@ -68,7 +68,7 @@
 
 ## ผลทดสอบ Phase 0 (2026-11-19)
 
-- Unit tests: **67 passed**
+- Unit tests: **78 passed**
 - probe จริงผ่าน: gateway, 1.1.1.1, 8.8.8.8, DNS, Wi-Fi, ARP
 - 10-minute loop (ก่อนแก้ตาม review): **117 probe rows**, 0 error, 0 gap event
   - ping 63, dns 33, wifi 18, arp 3
@@ -84,6 +84,12 @@
   - ARP เป็น passive: อุปกรณ์ที่ไม่คุยกับเครื่องนี้จะไม่ปรากฏ
   - ถ้า ICMP ถูกบล็อกจะบันทึกเป็น `network`; การ fallback TCP/DNS เป็นงาน Phase 1
   - หน้าจอ/tray เป็น Phase 2
+
+## Phase 1 (กำลังทำ)
+
+- `blackbox/events/rules.py` — gateway_down, internet_down, dns_fail, dns_slow, wifi_drop, latency_spike
+- `blackbox/store/events.py` — open/close/find open event
+- ยังไม่เชื่อม `runner.py` / `cli.py` (รองาน concurrent)
 
 ## เอกสาร
 
