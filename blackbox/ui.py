@@ -41,7 +41,12 @@ INDEX_HTML = """<!doctype html>
   </div>
 
   <script>
-    const token = new URLSearchParams(location.search).get("token") || "";
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token") || sessionStorage.getItem("bb_token") || "";
+    if (params.has("token")) {
+      sessionStorage.setItem("bb_token", token);
+      history.replaceState({}, "", "/");
+    }
     const statusEl = document.getElementById("status");
     const detailsEl = document.getElementById("details");
     const eventsEl = document.getElementById("events");
@@ -95,8 +100,14 @@ INDEX_HTML = """<!doctype html>
       }
     }
 
-    refresh();
-    setInterval(refresh, 5000);
+    if (!token) {
+      statusEl.textContent = "กรุณาเปิดจาก tray";
+      statusEl.className = "status warning";
+      detailsEl.textContent = "เปิดแอปจาก tray แล้วเลือก 'เปิดหน้าต่าง'";
+    } else {
+      refresh();
+      setInterval(refresh, 5000);
+    }
   </script>
 </body>
 </html>

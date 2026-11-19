@@ -92,7 +92,7 @@ class SecurityMiddleware:
                 scope, receive, send, 403, "Forbidden: Untrusted Referer"
             )
             return
-        if scope.get("path") == "/health":
+        if scope.get("path") in ("/health", "/"):
             await self.app(scope, receive, send)
             return
         if not self._token_ok(headers, scope):

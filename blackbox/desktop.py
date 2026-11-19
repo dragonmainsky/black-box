@@ -5,12 +5,12 @@ import socket
 import threading
 import time
 import urllib.request
+import webbrowser
 from pathlib import Path
 from typing import Any
 
 import pystray
 import uvicorn
-import webview
 from PIL import Image, ImageDraw
 
 from blackbox.api import create_app, load_or_create_token
@@ -41,6 +41,10 @@ def wait_for_health(port: int, timeout: float = 10.0) -> bool:
     return False
 
 
+def desktop_url(port: int, token: str) -> str:
+    return f"http://127.0.0.1:{port}/?token={token}"
+
+
 def create_icon() -> Image.Image:
     image = Image.new("RGB", (64, 64), "#0f1115")
     draw = ImageDraw.Draw(image)
@@ -68,7 +72,11 @@ def _single_instance() -> bool:
     return ctypes.get_last_error() != 183  # ERROR_ALREADY_EXISTS
 
 
-def run_desktop(data_dir: str | Path | None = None, port: int | None = None) -> None:
+def run_desktop(
+    data_dir: str | Path | None = None,
+    port: int | None = None,
+    open_browser: bool = True,
+) -> None:
     if not _single_instance():
         print("Home Network Black Box กำลังทำงานอยู่แล้ว")
         return
@@ -92,31 +100,20 @@ def run_desktop(data_dir: str | Path | None = None, port: int | None = None) -> 
 
     if not wait_for_health(port):
         server.should_exit = True
-        print("API ไม่ตอบสนอง — ยกเลิกการเปิดหน้าต่าง")
+        print("API ไม่ตอบสนอง — ยกเลิก")
         return
 
-    url = f"http://127.0.0.1:{port}/?token={token}"
-    window = webview.create_window(
-        "Home Network Black Box", url, width=900, height=650
-    )
-    quitting = {"value": False}
-
-    def on_closing() -> bool:
-        if quitting["value"]:
-            return True
-        window.hide()
-        return False
-
-    window.events.closing += on_closing
+    url = desktop_url(port, token)
+    print(f"UI: http://127.0.0.1:{port} (เปิดในเบราว์เซอร์)")
+    if open_browser:
+        webbrowser.open(url)
 
     def open_window(icon=None, item=None) -> None:
-        window.show()
+        webbrowser.open(url)
 
     def quit_app(icon, item=None) -> None:
-        quitting["value"] = True
         server.should_exit = True
         icon.stop()
-        window.destroy()
 
     icon = pystray.Icon(
         "blackbox",
@@ -127,7 +124,4 @@ def run_desktop(data_dir: str | Path | None = None, port: int | None = None) -> 
             pystray.MenuItem("ออก", quit_app),
         ),
     )
-    threading.Thread(target=icon.run, daemon=True).start()
-
-    print(f"API: http://127.0.0.1:{port}")
-    webview.start()
+    icon.run()

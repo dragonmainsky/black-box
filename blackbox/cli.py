@@ -129,9 +129,10 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser.add_argument("--limit", type=int, default=5)
 
     desktop = sub.add_parser(
-        "desktop", parents=[common], help="open tray and window"
+        "desktop", parents=[common], help="open tray and browser UI"
     )
     desktop.add_argument("--port", type=int, default=None)
+    desktop.add_argument("--no-browser", action="store_true")
 
     serve = sub.add_parser("serve-api", parents=[common], help="run local API server")
     serve.add_argument("--host", default="127.0.0.1")
@@ -161,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             run_desktop(
                 data_dir=data_dir,
                 port=getattr(args, "port", None),
+                open_browser=not getattr(args, "no_browser", False),
             )
             return 0
 

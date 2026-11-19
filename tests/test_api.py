@@ -398,6 +398,11 @@ def test_index_serves_html_with_token(tmp_path: Path):
     assert "Home Network Black Box" in response.text
 
 
-def test_index_requires_token(tmp_path: Path):
+def test_index_shell_is_public(tmp_path: Path):
     client = _client(tmp_path)
-    assert client.get("/").status_code == 401
+    assert client.get("/").status_code == 200
+
+
+def test_api_requires_token(tmp_path: Path):
+    client = _client(tmp_path)
+    assert client.get("/api/status").status_code == 401

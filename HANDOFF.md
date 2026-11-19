@@ -46,10 +46,11 @@
   - CLI: `blackbox serve-api [--port 8765] [--token ...]`
   - 24 unit tests ครอบ security + endpoints
 - Phase 2 ข้อ 3 (เสร็จแล้ว):
-  - `blackbox/desktop.py` — tray + pywebview window + probe/API ใน process เดียว
+  - `blackbox/desktop.py` — tray + default browser UI + probe/API ใน process เดียว
   - `blackbox/ui.py` — dashboard HTML ฝังใน API (`/`)
-  - `blackbox desktop` — single instance (mutex), close-to-tray, tray menu
-  - `setup.bat` ติดตั้ง `requirements-desktop.txt` (pywebview/pystray/Pillow)
+  - `blackbox desktop` — single instance (mutex), เปิด/ปิดจาก tray, `--no-browser`
+  - `setup.bat` ติดตั้ง `requirements-desktop.txt` (pystray/Pillow)
+  - ไม่ใช้ pywebview/WebView2 แล้ว — เบราว์เซอร์ของผู้ใช้แสดง UI
 
 ## งานถัดไป (Phase 2)
 
@@ -57,7 +58,7 @@
 
 1. [x] **CLI narrator + status** (เสร็จแล้ว)
 2. [x] **Local API (FastAPI)** (เสร็จแล้ว)
-3. [x] **Launcher + tray + pywebview** (เสร็จแล้ว)
+3. [x] **Launcher + tray + browser UI** (เสร็จแล้ว)
 4. **Notification** — แจ้งเตือน event ระดับ high
 5. **Settings UI** — interval / retention / public IP / autostart
 6. **Phase 3: evidence pack / report**

@@ -1,9 +1,8 @@
 import pytest
 
-pytest.importorskip("webview")
 pytest.importorskip("pystray")
 
-from blackbox.desktop import create_icon, free_port
+from blackbox.desktop import create_icon, desktop_url, free_port
 
 
 def test_free_port_returns_port():
@@ -14,3 +13,7 @@ def test_free_port_returns_port():
 
 def test_icon_is_64px():
     assert create_icon().size == (64, 64)
+
+
+def test_desktop_url_contains_token():
+    assert desktop_url(8765, "abc") == "http://127.0.0.1:8765/?token=abc"
