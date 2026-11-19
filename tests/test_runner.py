@@ -1,20 +1,21 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from blackbox.config import Config
 from blackbox.probes.runner import ProbeRunner
 from blackbox.store.db import create_engine, init_db
+from blackbox.store.meta import meta_get, meta_set
 from blackbox.store.probes import recent_probes
 
 BASE = datetime(2026, 11, 19, 12, 0, tzinfo=timezone.utc)
 
 
-def _runner(tmp_path):
+def _runner(tmp_path, **overrides):
     engine = create_engine(tmp_path)
     init_db(engine)
     cfg = Config(data_dir=tmp_path)
-    return ProbeRunner(
-        engine,
-        cfg,
+    kwargs = dict(
         interface_fn=lambda: None,
         dns_servers_fn=lambda alias: ["1.1.1.1"],
         ping_sender=type("S", (), {"send": lambda self, t, ms: 10.0})(),
@@ -31,6 +32,8 @@ def _runner(tmp_path):
         wifi_run_fn=lambda: (1, "", "no wifi"),
         arp_run_fn=lambda: (0, "", ""),
     )
+    kwargs.update(overrides)
+    return ProbeRunner(engine, cfg, **kwargs)
 
 
 def test_run_once_writes_probe_rows(tmp_path):
@@ -82,3 +85,63 @@ def test_run_once_skips_public_ip_by_default(tmp_path):
     runner = _runner(tmp_path)
     results = runner.run_once(BASE)
     assert all(r.probe != "public_ip" for r in results)
+
+
+def test_run_once_does_not_update_last_cycle(tmp_path):
+    runner = _runner(tmp_path)
+    runner.run_once(BASE)
+    assert meta_get(runner.engine, "last_cycle") is None
+
+
+def test_run_forever_loops_until_keyboard_interrupt(tmp_path):
+    runner = _runner(tmp_path)
+    runner._maybe_maintenance = lambda now: None
+    calls = []
+
+    def fake_cycle(now):
+        calls.append(now)
+        if len(calls) == 2:
+            raise KeyboardInterrupt
+        return []
+
+    runner.run_cycle = fake_cycle
+    sleeps = []
+    runner.sleep_fn = lambda seconds: sleeps.append(seconds)
+    with pytest.raises(KeyboardInterrupt):
+        runner.run_forever()
+    assert len(calls) == 2
+    assert len(sleeps) == 1
+
+
+def test_maintenance_runs_on_startup_and_not_again(tmp_path, monkeypatch):
+    runner = _runner(tmp_path)
+    calls = []
+
+    def fake(engine, now, **kwargs):
+        calls.append(now)
+        meta_set(engine, "last_maintenance", now.isoformat())
+        return {}
+
+    monkeypatch.setattr("blackbox.probes.runner.run_maintenance", fake)
+    runner._maybe_maintenance(BASE)
+    runner._maybe_maintenance(BASE + timedelta(hours=1))
+    assert len(calls) == 1
+    runner._maybe_maintenance(BASE + timedelta(hours=7))
+    assert len(calls) == 2
+
+
+def test_run_once_includes_wifi_when_monitored(tmp_path):
+    from pathlib import Path
+
+    from blackbox.probes.netif import InterfaceInfo
+
+    output = (Path(__file__).parent / "fixtures" / "netsh_wifi_en.txt").read_text(
+        encoding="utf-8"
+    )
+    runner = _runner(
+        tmp_path,
+        interface_fn=lambda: InterfaceInfo("Wi-Fi", 19, "192.168.1.1", True),
+        wifi_run_fn=lambda: (0, output, ""),
+    )
+    results = runner.run_once(BASE)
+    assert any(result.probe == "wifi" for result in results)

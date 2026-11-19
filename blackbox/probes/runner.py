@@ -21,6 +21,7 @@ from blackbox.store.devices import upsert_devices
 from blackbox.store.events import recent_events as store_recent_events
 from blackbox.store.meta import meta_get, meta_set
 from blackbox.store.probes import insert_probes
+from blackbox.store.retention import run_maintenance
 
 
 class ProbeRunner:
@@ -72,7 +73,11 @@ class ProbeRunner:
         return [replace(result, interface=info.alias) for result in results]
 
     def run_once(self, now: datetime | None = None) -> list[ProbeResult]:
-        return self._run(now or datetime.now(timezone.utc), force_all=True)
+        return self._run(
+            now or datetime.now(timezone.utc),
+            force_all=True,
+            update_last_cycle=False,
+        )
 
     def run_cycle(self, now: datetime) -> list[ProbeResult]:
         last = meta_get(self.engine, "last_cycle")
@@ -83,12 +88,16 @@ class ProbeRunner:
                 now,
                 self.config.base_interval_s,
             )
-        return self._run(now, force_all=False)
+        return self._run(now, force_all=False, update_last_cycle=True)
 
-    def _run(self, now: datetime, *, force_all: bool) -> list[ProbeResult]:
+    def _run(
+        self, now: datetime, *, force_all: bool, update_last_cycle: bool
+    ) -> list[ProbeResult]:
         info = self._get_interface(now)
         alias = info.alias if info else None
         results: list[ProbeResult] = []
+        if update_last_cycle:
+            meta_set(self.engine, "last_cycle", now.isoformat())
 
         def due(key: str, interval_s: int) -> bool:
             if force_all or key not in self._last_run:
@@ -156,16 +165,41 @@ class ProbeRunner:
 
         results = self._stamp(results, info)
         insert_probes(self.engine, results, now)
-        meta_set(self.engine, "last_cycle", now.isoformat())
         return results
 
+    def _maybe_maintenance(self, now: datetime):
+        last = meta_get(self.engine, "last_maintenance")
+        if last and (
+            now - datetime.fromisoformat(last)
+        ).total_seconds() < self.config.maintenance_interval_s:
+            return None
+        return run_maintenance(
+            self.engine,
+            now,
+            retention_days=self.config.retention_days,
+            rollup_days=self.config.rollup_retention_days,
+        )
+
     def run_forever(self) -> None:
+        next_at = time.monotonic()
         while True:
+            next_at = max(next_at, time.monotonic())
+            now = datetime.now(timezone.utc)
             try:
-                self.run_cycle(datetime.now(timezone.utc))
+                self._maybe_maintenance(now)
+            except Exception as exc:
+                print(f"maintenance error: {exc}", file=sys.stderr)
+            try:
+                self.run_cycle(now)
             except Exception as exc:
                 print(f"probe cycle error: {exc}", file=sys.stderr)
-            self.sleep_fn(self.config.base_interval_s)
+            next_at += self.config.base_interval_s
+            delay = next_at - time.monotonic()
+            if delay < 0:
+                missed = int((-delay) // self.config.base_interval_s) + 1
+                next_at += missed * self.config.base_interval_s
+                delay = next_at - time.monotonic()
+            self.sleep_fn(max(0.0, delay))
 
     def recent_events(self, limit: int = 50) -> list[dict]:
         return store_recent_events(self.engine, limit)

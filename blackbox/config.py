@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 ALLOWED_TARGETS = frozenset({"1.1.1.1", "8.8.8.8"})
@@ -15,6 +15,7 @@ class Config:
     arp_interval_s: int = 300
     public_ip_interval_s: int = 900
     public_ip_enabled: bool = False
+    maintenance_interval_s: int = 21600
     retention_days: int = 30
     rollup_retention_days: int = 365
     monitor_interface: str = "auto"
@@ -25,7 +26,13 @@ class Config:
     def validate(self) -> None:
         if not 10 <= self.base_interval_s <= 3600:
             raise ValueError("base_interval_s ต้องอยู่ระหว่าง 10–3600 วินาที")
-        for name in ("dns_interval_s", "wifi_interval_s", "arp_interval_s", "public_ip_interval_s"):
+        for name in (
+            "dns_interval_s",
+            "wifi_interval_s",
+            "arp_interval_s",
+            "public_ip_interval_s",
+            "maintenance_interval_s",
+        ):
             if getattr(self, name) < self.base_interval_s:
                 raise ValueError(f"{name} ต้องไม่น้อยกว่า base_interval_s")
         if not 1 <= self.retention_days <= 3650:
@@ -39,3 +46,15 @@ class Config:
         unknown = set(self.targets) - ALLOWED_TARGETS
         if unknown:
             raise ValueError(f"target ไม่อยู่ใน allowlist: {sorted(unknown)}")
+
+    def with_base_interval(self, base: int) -> "Config":
+        """สร้าง config ใหม่โดยคำนวณ cadence ตาม spec"""
+        return replace(
+            self,
+            base_interval_s=base,
+            dns_interval_s=2 * base,
+            wifi_interval_s=max(300, 10 * base),
+            arp_interval_s=max(300, 10 * base),
+            public_ip_interval_s=max(900, base),
+            maintenance_interval_s=max(21600, base),
+        )

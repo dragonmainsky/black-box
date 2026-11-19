@@ -62,6 +62,17 @@ def probe_dns(
                 )
             )
             continue
+        except dns.exception.DNSException as exc:
+            results.append(
+                ProbeResult(
+                    probe="dns",
+                    target=resolver,
+                    ok=False,
+                    error_kind="network",
+                    detail={"resolver": resolver, "error": type(exc).__name__},
+                )
+            )
+            continue
         except (OSError, ValueError):
             results.append(
                 ProbeResult(

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from dataclasses import replace
 from datetime import datetime, timezone
 
 from blackbox.config import Config
@@ -67,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
         config = Config(data_dir=data_dir)
         interval = getattr(args, "interval", None)
         if interval is not None:
-            config = replace(config, base_interval_s=interval)
+            config = config.with_base_interval(interval)
         config.validate()
 
         engine = create_engine(data_dir)
@@ -105,17 +104,34 @@ def main(argv: list[str] | None = None) -> int:
                 if not rows and not events:
                     print("ยังไม่มีข้อมูล")
                     return 0
+                entries: list[tuple[str, str, dict]] = []
                 for row in rows:
-                    status = "ok" if row["ok"] else "fail"
-                    print(
-                        f"{row['ts']} | {row['probe']} | {row['target']} | "
-                        f"{row['value']} | {status}"
-                    )
+                    entries.append((row["ts"], "probe", row))
                 for event in events:
-                    print(
-                        f"{event['ts_start']} | {event['type']} | "
-                        f"{event['severity']} | {event['title']}"
-                    )
+                    entries.append((event["ts_start"], "event", event))
+                entries.sort(key=lambda item: item[0], reverse=True)
+                for ts, kind, item in entries[: args.limit]:
+                    if kind == "probe":
+                        value = (
+                            item["value"]
+                            if item["value"] is not None
+                            else item["text_value"]
+                        )
+                        status = (
+                            "ok"
+                            if item["ok"]
+                            else f"fail:{item['error_kind']}"
+                        )
+                        print(
+                            f"{ts} | {item['probe']} | {item['target']} | "
+                            f"{value} | {status}"
+                        )
+                    else:
+                        end = item.get("ts_end") or "ongoing"
+                        print(
+                            f"{ts} | {item['type']} | {item['severity']} | "
+                            f"{item['title']} | {end}"
+                        )
                 return 0
 
         parser.print_help()

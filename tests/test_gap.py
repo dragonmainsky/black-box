@@ -33,3 +33,24 @@ def test_repeated_gap_creates_separate_events(tmp_path):
     )
     assert first != second
     assert len(recent_events(engine)) == 2
+
+
+def test_duplicate_gap_is_not_recorded_twice(tmp_path):
+    engine = create_engine(tmp_path)
+    init_db(engine)
+    first = record_gap_if_needed(engine, BASE, BASE + timedelta(minutes=10), 30)
+    second = record_gap_if_needed(engine, BASE, BASE + timedelta(minutes=10), 30)
+    assert first is not None
+    assert second is None
+    assert len(recent_events(engine)) == 1
+
+
+def test_backward_clock_is_ignored(tmp_path):
+    engine = create_engine(tmp_path)
+    init_db(engine)
+    assert (
+        record_gap_if_needed(
+            engine, BASE, BASE - timedelta(minutes=1), 30
+        )
+        is None
+    )

@@ -35,6 +35,17 @@ def insert_gap(
         return int(result.inserted_primary_key[0])
 
 
+def last_gap_start(engine: Engine) -> str | None:
+    with engine.connect() as conn:
+        row = conn.execute(
+            select(events.c.ts_start)
+            .where(events.c.type == "monitor_gap")
+            .order_by(events.c.id.desc())
+            .limit(1)
+        ).first()
+        return row[0] if row else None
+
+
 def recent_events(engine: Engine, limit: int = 50) -> list[dict]:
     with engine.connect() as conn:
         rows = (
