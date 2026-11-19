@@ -26,14 +26,14 @@
 
 - `--data-dir` ไม่ระบุ → ใช้ `%APPDATA%\BlackBox`
 - `probe once` คืน exit code `2` ถ้ามี probe ที่ล้มเหลว
-- `probe loop --interval 60` เปลี่ยน cadence ของ ping
+- `probe loop --interval 60` เปลี่ยน cadence ของ ping และคำนวณ DNS/Wi-Fi/ARP ให้อัตโนมัติ
 
 ## สิ่งที่วัด
 
 | Probe | ค่าเริ่มต้น |
 |---|---|
 | gateway + internet ping (1.1.1.1, 8.8.8.8) | ทุก 30 วิ, 3 echo ต่อเป้า |
-| DNS (system resolver + 1.1.1.1) | ทุก 60 วิ |
+| DNS (system resolver + 1.1.1.1 + 8.8.8.8) | ทุก 60 วิ |
 | Wi-Fi (netsh) | ทุก 5 นาที |
 | ARP passive (`arp -a`) | ทุก 5 นาที |
 | public IP (ipify) | ปิดโดยค่าเริ่มต้น |
@@ -53,10 +53,17 @@
 
 ## ผลทดสอบ Phase 0 (2026-11-19)
 
-- Unit tests: **45 passed**
+- Unit tests: **63 passed**
 - probe จริงผ่าน: gateway, 1.1.1.1, 8.8.8.8, DNS, Wi-Fi, ARP
-- 10-minute loop: **117 probe rows**, 0 error, 0 gap event
+- 10-minute loop (ก่อนแก้ตาม review): **117 probe rows**, 0 error, 0 gap event
   - ping 63, dns 33, wifi 18, arp 3
+- หลังแก้: 45-second loop smoke — 31 rows, 0 error, maintenance tick ทำงาน
+- สิ่งที่แก้หลัง review:
+  - ถอด console output เป็น UTF-8 → CP874 → OEM (รองรับ Windows ไทย)
+  - เลือก default route จาก `RouteMetric + InterfaceMetric` และตัด `0.0.0.0`
+  - กัน `monitor_gap` ซ้ำ, ใช้ monotonic deadline, maintenance ทุก 6 ชม.
+  - คำนวณ cadence จาก `--interval`, DNS `NoNameservers` → `network`
+  - `show recent` เป็น timeline เดียวและแสดง `text_value`
 - ข้อจำกัดที่พบ:
   - บาง driver ไม่ส่ง BSSID — probe จะข้าม field ที่หายไป
   - ARP เป็น passive: อุปกรณ์ที่ไม่คุยกับเครื่องนี้จะไม่ปรากฏ
