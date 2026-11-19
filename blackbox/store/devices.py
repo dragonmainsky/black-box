@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Sequence
 
+from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import Engine
 
@@ -17,14 +18,29 @@ def _iso(ts: datetime) -> str:
 
 def upsert_devices(
     engine: Engine, entries: Sequence[ArpEntry], seen_at: datetime
-) -> int:
+) -> list[str]:
     if not entries:
-        return 0
+        return []
     now = _iso(seen_at)
-    count = 0
+    cleaned_entries: list[tuple[str, ArpEntry]] = []
+    seen_macs: set[str] = set()
+    for entry in entries:
+        mac = entry.mac.lower().replace(":", "-")
+        if mac not in seen_macs:
+            seen_macs.add(mac)
+            cleaned_entries.append((mac, entry))
+
+    new_macs: list[str] = []
     with engine.begin() as conn:
-        for entry in entries:
-            mac = entry.mac.lower().replace(":", "-")
+        all_macs = [mac for mac, _ in cleaned_entries]
+        existing = set(
+            conn.execute(
+                select(devices.c.mac).where(devices.c.mac.in_(all_macs))
+            ).scalars().all()
+        )
+        for mac, entry in cleaned_entries:
+            if mac not in existing:
+                new_macs.append(mac)
             stmt = sqlite_insert(devices).values(
                 mac=mac,
                 ip=entry.ip,
@@ -38,5 +54,4 @@ def upsert_devices(
                 set_={"ip": entry.ip, "last_seen": now},
             )
             conn.execute(stmt)
-            count += 1
-    return count
+    return new_macs

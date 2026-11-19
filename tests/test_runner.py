@@ -257,3 +257,26 @@ def test_run_forever_prints_start_and_cycle(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "เริ่มเฝ้าระวัง" in out
     assert "ping 1" in out
+
+
+def test_run_once_opens_new_device_event(tmp_path):
+    from pathlib import Path
+
+    arp_output = (Path(__file__).parent / "fixtures" / "arp_en.txt").read_text(
+        encoding="utf-8"
+    )
+    runner = _runner(tmp_path, arp_run_fn=lambda: (0, arp_output, ""))
+    runner.run_once(BASE)
+
+    events = [e for e in runner.recent_events() if e["type"] == "new_device"]
+    assert len(events) == 2
+    assert all(e["severity"] == "low" for e in events)
+    assert all("พบอุปกรณ์ใหม่" in e["title"] for e in events)
+    macs = {e["evidence"]["mac"] for e in events}
+    assert "aa-bb-cc-dd-ee-ff" in macs
+    assert "11-22-33-44-55-66" in macs
+
+    # Second run does not open duplicate new_device events
+    runner.run_once(BASE + timedelta(minutes=5))
+    events_after = [e for e in runner.recent_events() if e["type"] == "new_device"]
+    assert len(events_after) == 2

@@ -21,6 +21,7 @@ from blackbox.probes.wifi import RunFn, probe_wifi
 from blackbox.store.devices import upsert_devices
 from blackbox.store.events import (
     apply_actions,
+    open_event,
     open_event_types,
     recent_events as store_recent_events,
 )
@@ -190,7 +191,26 @@ class ProbeRunner:
         if due("arp", self.config.arp_interval_s):
             sweep = probe_arp(self.arp_run_fn, interface=alias)
             results.append(sweep.result)
-            upsert_devices(self.engine, sweep.entries, now)
+            new_macs = upsert_devices(self.engine, sweep.entries, now)
+            if new_macs:
+                entry_map = {
+                    e.mac.lower().replace(":", "-"): e for e in sweep.entries
+                }
+                for mac in new_macs:
+                    entry = entry_map.get(mac)
+                    ip = entry.ip if entry else None
+                    evidence = {"mac": mac}
+                    if ip:
+                        evidence["ip"] = ip
+                    open_event(
+                        self.engine,
+                        event_type="new_device",
+                        severity="low",
+                        title="พบอุปกรณ์ใหม่",
+                        details=f"พบ MAC {mac}" + (f" ({ip})" if ip else ""),
+                        evidence=evidence,
+                        ts=now,
+                    )
             self._last_run["arp"] = now
 
         if self.config.public_ip_enabled and due(

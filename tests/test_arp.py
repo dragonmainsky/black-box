@@ -36,8 +36,27 @@ def test_upsert_devices_tracks_seen(tmp_path):
     ts = datetime(2026, 11, 19, 12, 0, tzinfo=timezone.utc)
     output = (FIXTURES / "arp_en.txt").read_text(encoding="utf-8")
     entries = parse_arp_table(output)
-    assert upsert_devices(engine, entries, ts) >= 1
-    assert upsert_devices(engine, entries, ts) >= 0
+    new_macs = upsert_devices(engine, entries, ts)
+    assert len(new_macs) >= 1
+    assert upsert_devices(engine, entries, ts) == []
+
+
+def test_upsert_devices_returns_only_new_macs(tmp_path):
+    from blackbox.probes.arp import ArpEntry
+
+    engine = create_engine(tmp_path)
+    init_db(engine)
+    ts = datetime(2026, 11, 19, 12, 0, tzinfo=timezone.utc)
+    first_batch = [
+        ArpEntry(ip="192.168.1.50", mac="00-11-22-33-44-55", kind="dynamic"),
+    ]
+    assert upsert_devices(engine, first_batch, ts) == ["00-11-22-33-44-55"]
+    second_batch = [
+        ArpEntry(ip="192.168.1.50", mac="00-11-22-33-44-55", kind="dynamic"),
+        ArpEntry(ip="192.168.1.51", mac="aa-bb-cc-dd-ee-ff", kind="dynamic"),
+    ]
+    assert upsert_devices(engine, second_batch, ts) == ["aa-bb-cc-dd-ee-ff"]
+    assert upsert_devices(engine, second_batch, ts) == []
 
 
 def test_upsert_devices_keeps_first_seen_and_updates_last_seen(tmp_path):

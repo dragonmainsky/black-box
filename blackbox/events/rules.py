@@ -33,6 +33,11 @@ _RULES: dict[str, tuple[str, str, str]] = {
         "Packet loss สูง",
         "อัตราแพ็กเก็ตหายเกิน 5% ใน 5 นาที",
     ),
+    "new_device": (
+        "low",
+        "พบอุปกรณ์ใหม่",
+        "พบ MAC address ที่ไม่เคยเห็นในเครือข่าย",
+    ),
 }
 
 
