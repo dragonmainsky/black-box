@@ -2,7 +2,15 @@ import pytest
 
 pytest.importorskip("pystray")
 
-from blackbox.desktop import create_icon, desktop_url, free_port, wait_for_stop
+from blackbox.desktop import (
+    create_icon,
+    desktop_url,
+    free_port,
+    read_runtime,
+    remove_runtime,
+    wait_for_stop,
+    write_runtime,
+)
 
 
 def test_free_port_returns_port():
@@ -25,3 +33,12 @@ def test_wait_for_stop_handles_keyboard_interrupt():
             raise KeyboardInterrupt
 
     wait_for_stop(InterruptingEvent())
+
+
+def test_runtime_roundtrip(tmp_path):
+    write_runtime(tmp_path, 8888)
+    runtime = read_runtime(tmp_path)
+    assert runtime["port"] == 8888
+    assert isinstance(runtime["pid"], int)
+    remove_runtime(tmp_path)
+    assert read_runtime(tmp_path) is None

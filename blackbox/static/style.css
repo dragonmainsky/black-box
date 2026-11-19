@@ -152,6 +152,7 @@ h3 { font-size: 14px; margin: 18px 0 8px; }
 }
 .settings input[type="checkbox"] { margin-right: 4px; }
 .settings button { background: var(--green); color: #0f1115; border: 0; font-weight: 600; }
+.settings .danger { background: var(--red); color: #fff; }
 .settings .row { margin-top: 12px; }
 
 @media (max-width: 700px) {

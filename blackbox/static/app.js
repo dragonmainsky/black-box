@@ -475,6 +475,16 @@ document.getElementById("summary-close").addEventListener("click", () => {
   els.summary.hidden = true;
 });
 document.getElementById("save-settings").addEventListener("click", saveSettings);
+document.getElementById("quit-app").addEventListener("click", async () => {
+  if (!confirm("ออกจาก Home Network Black Box?")) return;
+  try {
+    await api("/api/quit", { method: "POST" });
+    document.body.innerHTML =
+      "<main class='wrap'><div class='card'>ปิดโปรแกรมแล้ว — ปิดแท็บนี้ได้</div></main>";
+  } catch (error) {
+    alert("ปิดไม่ได้: " + error);
+  }
+});
 
 if (!token) {
   els.status.textContent = "กรุณาเปิดจาก tray";

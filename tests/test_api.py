@@ -572,3 +572,33 @@ def test_probes_since_and_until(tmp_path: Path):
     )
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_quit_calls_callback(tmp_path: Path):
+    engine = _make_engine(tmp_path)
+    seen = []
+    app = create_app(
+        engine,
+        token=TOKEN,
+        allowed_hosts={"testserver"},
+        on_quit=lambda: seen.append(1),
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/api/quit", headers={"Authorization": f"Bearer {TOKEN}"}
+    )
+    assert response.status_code == 200
+    assert seen == [1]
+
+
+def test_quit_requires_token(tmp_path: Path):
+    client = _client(tmp_path)
+    assert client.post("/api/quit").status_code == 401
+
+
+def test_quit_returns_503_without_callback(tmp_path: Path):
+    client = _client(tmp_path)
+    response = client.post(
+        "/api/quit", headers={"Authorization": f"Bearer {TOKEN}"}
+    )
+    assert response.status_code == 503

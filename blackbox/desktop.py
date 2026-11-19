@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ctypes
+import json
+import os
 import socket
 import threading
 import time
@@ -104,16 +106,57 @@ def install_console_handler(stop_event: threading.Event) -> None:
     kernel32.SetConsoleCtrlHandler(_CONSOLE_HANDLER, True)
 
 
+def runtime_path(data_dir: Path) -> Path:
+    return data_dir / "runtime.json"
+
+
+def read_runtime(data_dir: Path) -> dict | None:
+    path = runtime_path(data_dir)
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def write_runtime(data_dir: Path, port: int) -> None:
+    runtime_path(data_dir).write_text(
+        json.dumps({"pid": os.getpid(), "port": port}),
+        encoding="utf-8",
+    )
+
+
+def remove_runtime(data_dir: Path) -> None:
+    try:
+        runtime_path(data_dir).unlink()
+    except FileNotFoundError:
+        pass
+
+
 def run_desktop(
     data_dir: str | Path | None = None,
     port: int | None = None,
     open_browser: bool = True,
 ) -> None:
+    data = resolve_data_dir(str(data_dir) if data_dir else None)
+
     if not _single_instance():
-        print("Home Network Black Box กำลังทำงานอยู่แล้ว")
+        existing = read_runtime(data)
+        port_existing = existing.get("port") if existing else None
+        if isinstance(port_existing, int) and wait_for_health(port_existing, timeout=1.5):
+            token_existing = load_or_create_token(data)
+            url_existing = desktop_url(port_existing, token_existing)
+            print(f"เปิดหน้าต่างที่มีอยู่แล้ว: {url_existing}")
+            if open_browser:
+                webbrowser.open(url_existing)
+        else:
+            print(
+                "มี Home Network Black Box ค้างอยู่ — "
+                "ปิดจาก tray หรือ Task Manager ก่อน"
+            )
         return
 
-    data = resolve_data_dir(str(data_dir) if data_dir else None)
     engine = create_engine(data)
     init_db(engine)
     settings = load_settings(engine)
@@ -124,12 +167,19 @@ def run_desktop(
     def apply_settings(new_settings) -> None:
         runner.update_config(config_from_settings(data, new_settings))
 
+    stop_event = threading.Event()
+    install_console_handler(stop_event)
+
+    def request_quit() -> None:
+        threading.Timer(0.2, stop_event.set).start()
+
     token = load_or_create_token(data)
     app = create_app(
         engine,
         token=token,
         data_dir=data,
         on_settings_changed=apply_settings,
+        on_quit=request_quit,
     )
     port = port or free_port()
     server = uvicorn.Server(
@@ -143,12 +193,10 @@ def run_desktop(
         return
 
     url = desktop_url(port, token)
+    write_runtime(data, port)
     print(f"UI: http://127.0.0.1:{port} (เปิดในเบราว์เซอร์)")
     if open_browser:
         webbrowser.open(url)
-
-    stop_event = threading.Event()
-    install_console_handler(stop_event)
 
     def open_window(icon=None, item=None) -> None:
         webbrowser.open(url)
@@ -191,5 +239,6 @@ def run_desktop(
     try:
         wait_for_stop(stop_event)
     finally:
+        remove_runtime(data)
         server.should_exit = True
         icon.stop()

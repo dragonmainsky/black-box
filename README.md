@@ -30,6 +30,7 @@
 ```
 
 > `desktop` เปิด tray + UI ใน default browser; ปิดแท็บไม่ปิดแอป (ออกที่ tray)
+> เปิดซ้ำจะเปิดหน้าต่างของ instance เดิม; มีปุ่ม "ออกจากโปรแกรม" ใน UI
 > UI: day/week/month/year, filter, คลิก event ดูหลักฐาน, ลากเลือกช่วง → อธิบายช่วงนี้
 > หน้า UI มีการ์ดตั้งค่า interval / retention / public IP — บันทึกลง DB และมีผลรอบถัดไป
 > ใช้ `--data-dir .\data` สำหรับเดโม/ทดสอบ; `--no-browser` สำหรับ smoke

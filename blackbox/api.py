@@ -288,12 +288,22 @@ def put_settings(
     return settings.to_dict()
 
 
+@api_router.post("/quit")
+def quit_app(request: Request) -> dict[str, bool]:
+    callback = getattr(request.app.state, "on_quit", None)
+    if callback is None:
+        raise HTTPException(status_code=503, detail="Quit not available")
+    callback()
+    return {"ok": True}
+
+
 def create_app(
     engine: Engine,
     token: str | None = None,
     data_dir: Path | None = None,
     allowed_hosts: set[str] | None = None,
     on_settings_changed: Callable[[Settings], None] | None = None,
+    on_quit: Callable[[], None] | None = None,
 ) -> FastAPI:
     if not token:
         if data_dir:
@@ -305,6 +315,7 @@ def create_app(
     app.state.engine = engine
     app.state.token = token
     app.state.on_settings_changed = on_settings_changed
+    app.state.on_quit = on_quit
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     @app.get("/health")
@@ -337,6 +348,9 @@ def run_api(
     import uvicorn
 
     app = create_app(engine, token=token, data_dir=data_dir)
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+    app.state.on_quit = lambda: setattr(server, "should_exit", True)
     print(f"API server running on http://{host}:{port}")
     print(f"Token: {app.state.token}")
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    server.run()

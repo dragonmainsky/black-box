@@ -8,7 +8,7 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **166 passed** (2026-11-19)
+- Tests: **170 passed** (2026-11-19)
 - Python: รัน `.\setup.bat` ครั้งแรก เพื่อสร้าง `.venv` (ไม่มี `.venv` ใน repo)
 
 > เริ่มงาน: **Phase 2 UI เสร็จครบแล้ว** — เริ่ม Packaging / Phase 3
@@ -33,7 +33,7 @@
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 166 passed
+- Tests: 170 passed
 - Phase 2 ข้อ 1 (เสร็จแล้ว):
   - `show recent` แสดง `narrate_event()` ใต้แถว event
   - เพิ่ม `show status` สรุปสถานะสุขภาพ (ปกติ/เตือน/วิกฤต), ข้อมูลเครือข่าย, เหตุการณ์ที่กำลังเกิด, และประวัติล่าสุด
@@ -68,6 +68,10 @@
   - ลากเลือกช่วงเวลา → `/api/summary` อธิบายช่วงนี้
   - API: `/api/timeline`, `/api/summary`, `/api/events` + `/api/probes` filters
   - packaging ต้อง include `blackbox/static/`
+- Single instance / quit (เสร็จแล้ว):
+  - `runtime.json` เก็บ pid/port; เปิดซ้ำ → เปิด URL ของ instance เดิม
+  - `POST /api/quit` + ปุ่ม “ออกจากโปรแกรม” ใน UI
+  - tray “ออก” และ Ctrl+C ยังใช้ได้
 
 ## งานถัดไป (Phase 2)
 
