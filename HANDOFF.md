@@ -8,10 +8,10 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **141 passed** (2026-11-19)
+- Tests: **144 passed** (2026-11-19)
 - Python: รัน `.\setup.bat` ครั้งแรก เพื่อสร้าง `.venv` (ไม่มี `.venv` ใน repo)
 
-> เริ่มงาน: **Phase 2 ข้อ 3 เสร็จแล้ว** — เริ่ม Notification / Settings / Packaging
+> เริ่มงาน: **Phase 2 ข้อ 4 (Notification) เสร็จแล้ว** — เริ่ม Settings UI / Packaging
 
 ## อ่านตามลำดับ
 
@@ -33,7 +33,7 @@
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 137 passed
+- Tests: 144 passed
 - Phase 2 ข้อ 1 (เสร็จแล้ว):
   - `show recent` แสดง `narrate_event()` ใต้แถว event
   - เพิ่ม `show status` สรุปสถานะสุขภาพ (ปกติ/เตือน/วิกฤต), ข้อมูลเครือข่าย, เหตุการณ์ที่กำลังเกิด, และประวัติล่าสุด
@@ -51,6 +51,9 @@
   - `blackbox desktop` — single instance (mutex), เปิด/ปิดจาก tray, `--no-browser`
   - `setup.bat` ติดตั้ง `requirements-desktop.txt` (pystray/Pillow)
   - ไม่ใช้ pywebview/WebView2 แล้ว — เบราว์เซอร์ของผู้ใช้แสดง UI
+- Phase 2 ข้อ 4 (เสร็จแล้ว):
+  - `ProbeRunner.on_event` callback หลัง apply event actions
+  - tray `notify` เฉพาะ event `open` + severity `high`
 
 ## งานถัดไป (Phase 2)
 
@@ -59,9 +62,10 @@
 1. [x] **CLI narrator + status** (เสร็จแล้ว)
 2. [x] **Local API (FastAPI)** (เสร็จแล้ว)
 3. [x] **Launcher + tray + browser UI** (เสร็จแล้ว)
-4. **Notification** — แจ้งเตือน event ระดับ high
+4. [x] **Notification** — แจ้งเตือน event ระดับ high (เสร็จแล้ว)
 5. **Settings UI** — interval / retention / public IP / autostart
-6. **Phase 3: evidence pack / report**
+6. **Packaging** — onefile + portable zip + clean Windows test
+7. **Phase 3: evidence pack / report**
 
 ## ข้อจำกัดสำคัญ
 

@@ -54,6 +54,7 @@
 - `probe loop --interval 60` เปลี่ยน cadence ของ ping และคำนวณ DNS/Wi-Fi/ARP ให้อัตโนมัติ
 - `serve-api` เปิด Local API บน `127.0.0.1:8765` พร้อม token; ใช้ `--port` เพื่อเปลี่ยนพอร์ต
 - `desktop` เปิด tray + UI ใน default browser; ปิดแท็บไม่ปิดแอป (ออกที่ tray)
+- แจ้งเตือน event ระดับ high ผ่าน tray
 
 ## สิ่งที่วัด
 

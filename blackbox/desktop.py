@@ -87,9 +87,6 @@ def run_desktop(
     config = Config(data_dir=data)
     config.validate()
 
-    runner = ProbeRunner(engine, config)
-    threading.Thread(target=runner.run_forever, daemon=True).start()
-
     token = load_or_create_token(data)
     app = create_app(engine, token=token, data_dir=data)
     port = port or free_port()
@@ -124,4 +121,17 @@ def run_desktop(
             pystray.MenuItem("ออก", quit_app),
         ),
     )
-    icon.run()
+
+    def notify_event(action) -> None:
+        if action.action == "open" and action.severity == "high":
+            icon.notify(
+                f"{action.title}: {action.details}",
+                "Home Network Black Box",
+            )
+
+    runner = ProbeRunner(engine, config, on_event=notify_event)
+
+    def start_runner(icon) -> None:
+        threading.Thread(target=runner.run_forever, daemon=True).start()
+
+    icon.run(setup=start_runner)

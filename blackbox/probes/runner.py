@@ -11,7 +11,7 @@ from sqlalchemy.engine import Engine
 
 from blackbox.config import Config
 from blackbox.events.gap import record_gap_if_needed
-from blackbox.events.rules import RuleEngine
+from blackbox.events.rules import EventAction, RuleEngine
 from blackbox.probe_types import ProbeResult
 from blackbox.probes.arp import probe_arp
 from blackbox.probes.dns import ResolverFn, probe_dns
@@ -61,6 +61,7 @@ class ProbeRunner:
         wifi_run_fn: RunFn | None = None,
         arp_run_fn: RunFn | None = None,
         public_ip_fn: Callable[[], ProbeResult] | None = None,
+        on_event: Callable[[EventAction], None] | None = None,
         sleep_fn: Callable[[float], None] = time.sleep,
     ) -> None:
         self.engine = engine
@@ -72,6 +73,7 @@ class ProbeRunner:
         self.wifi_run_fn = wifi_run_fn
         self.arp_run_fn = arp_run_fn
         self.public_ip_fn = public_ip_fn
+        self.on_event = on_event
         self.sleep_fn = sleep_fn
         self._interface: InterfaceInfo | None = None
         self._interface_checked_at: datetime | None = None
@@ -298,6 +300,12 @@ class ProbeRunner:
         )
         if actions:
             apply_actions(self.engine, actions)
+            if self.on_event:
+                for action in actions:
+                    try:
+                        self.on_event(action)
+                    except Exception:
+                        pass
         return results
 
     def _maybe_maintenance(self, now: datetime):

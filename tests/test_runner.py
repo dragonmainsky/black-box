@@ -168,6 +168,30 @@ def test_run_once_opens_gateway_down_event(tmp_path):
     assert event["severity"] == "high"
 
 
+def test_run_once_calls_event_callback(tmp_path):
+    from blackbox.probes.netif import InterfaceInfo
+
+    class GatewayDown:
+        def send(self, target, timeout_ms):
+            return None if target == "192.168.1.1" else 10.0
+
+    seen = []
+    runner = _runner(
+        tmp_path,
+        interface_fn=lambda: InterfaceInfo("Ethernet", 5, "192.168.1.1", False),
+        ping_sender=GatewayDown(),
+        on_event=seen.append,
+    )
+    for _ in range(3):
+        runner.run_once(BASE)
+    assert any(
+        action.type == "gateway_down"
+        and action.action == "open"
+        and action.severity == "high"
+        for action in seen
+    )
+
+
 def test_run_once_closes_gateway_down_event(tmp_path):
     from blackbox.probes.netif import InterfaceInfo
 
