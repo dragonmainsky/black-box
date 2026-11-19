@@ -8,7 +8,7 @@
 - Branch: `phase-0`
 - HEAD: current tip ของ branch `phase-0` (ดู `git log --oneline -1`)
 - Remote: ไม่มี (local only)
-- Tests: **144 passed** (2026-11-19)
+- Tests: **145 passed** (2026-11-19)
 - Python: รัน `.\setup.bat` ครั้งแรก เพื่อสร้าง `.venv` (ไม่มี `.venv` ใน repo)
 
 > เริ่มงาน: **Phase 2 ข้อ 4 (Notification) เสร็จแล้ว** — เริ่ม Settings UI / Packaging
@@ -33,7 +33,7 @@
 - Event store: open/close/find; `show recent` เป็น merged timeline
 - Windows console decoding: UTF-8 → CP874 → OEM
 - Default route: `RouteMetric + InterfaceMetric`, filter `0.0.0.0`
-- Tests: 144 passed
+- Tests: 145 passed
 - Phase 2 ข้อ 1 (เสร็จแล้ว):
   - `show recent` แสดง `narrate_event()` ใต้แถว event
   - เพิ่ม `show status` สรุปสถานะสุขภาพ (ปกติ/เตือน/วิกฤต), ข้อมูลเครือข่าย, เหตุการณ์ที่กำลังเกิด, และประวัติล่าสุด
@@ -54,6 +54,7 @@
 - Phase 2 ข้อ 4 (เสร็จแล้ว):
   - `ProbeRunner.on_event` callback หลัง apply event actions
   - tray `notify` เฉพาะ event `open` + severity `high`
+  - Ctrl+C / Ctrl+Break: `SetConsoleCtrlHandler` + main thread `wait_for_stop`
 
 ## งานถัดไป (Phase 2)
 

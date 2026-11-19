@@ -55,6 +55,7 @@
 - `serve-api` เปิด Local API บน `127.0.0.1:8765` พร้อม token; ใช้ `--port` เพื่อเปลี่ยนพอร์ต
 - `desktop` เปิด tray + UI ใน default browser; ปิดแท็บไม่ปิดแอป (ออกที่ tray)
 - แจ้งเตือน event ระดับ high ผ่าน tray
+- Ctrl+C หรือ Ctrl+Break หยุด desktop ได้
 
 ## สิ่งที่วัด
 

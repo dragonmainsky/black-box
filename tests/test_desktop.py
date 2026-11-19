@@ -2,7 +2,7 @@ import pytest
 
 pytest.importorskip("pystray")
 
-from blackbox.desktop import create_icon, desktop_url, free_port
+from blackbox.desktop import create_icon, desktop_url, free_port, wait_for_stop
 
 
 def test_free_port_returns_port():
@@ -17,3 +17,11 @@ def test_icon_is_64px():
 
 def test_desktop_url_contains_token():
     assert desktop_url(8765, "abc") == "http://127.0.0.1:8765/?token=abc"
+
+
+def test_wait_for_stop_handles_keyboard_interrupt():
+    class InterruptingEvent:
+        def wait(self, timeout):
+            raise KeyboardInterrupt
+
+    wait_for_stop(InterruptingEvent())

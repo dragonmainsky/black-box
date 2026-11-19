@@ -20,6 +20,7 @@ from blackbox.probes.runner import ProbeRunner
 from blackbox.store.db import create_engine, init_db
 
 _MUTEX_HANDLE: Any = None
+_CONSOLE_HANDLER: Any = None
 
 
 def free_port() -> int:
@@ -72,6 +73,37 @@ def _single_instance() -> bool:
     return ctypes.get_last_error() != 183  # ERROR_ALREADY_EXISTS
 
 
+def wait_for_stop(stop_event: threading.Event, interval: float = 0.5) -> None:
+    """รอจนกว่า stop_event จะถูก set; Ctrl+C ต้องหยุดได้"""
+    try:
+        while not stop_event.wait(interval):
+            pass
+    except KeyboardInterrupt:
+        pass
+
+
+def install_console_handler(stop_event: threading.Event) -> None:
+    """รับ Ctrl+C / Ctrl+Break จาก Windows console แล้วสั่งหยุด"""
+    global _CONSOLE_HANDLER
+    if not hasattr(ctypes, "windll"):
+        return
+
+    handler_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_ulong)
+    stop_events = {0, 1, 2, 5, 6}  # C, BREAK, CLOSE, LOGOFF, SHUTDOWN
+
+    def handler(event: int) -> bool:
+        if event in stop_events:
+            stop_event.set()
+            return True
+        return False
+
+    _CONSOLE_HANDLER = handler_type(handler)
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleCtrlHandler.argtypes = [handler_type, ctypes.c_bool]
+    kernel32.SetConsoleCtrlHandler.restype = ctypes.c_bool
+    kernel32.SetConsoleCtrlHandler(_CONSOLE_HANDLER, True)
+
+
 def run_desktop(
     data_dir: str | Path | None = None,
     port: int | None = None,
@@ -105,10 +137,14 @@ def run_desktop(
     if open_browser:
         webbrowser.open(url)
 
+    stop_event = threading.Event()
+    install_console_handler(stop_event)
+
     def open_window(icon=None, item=None) -> None:
         webbrowser.open(url)
 
     def quit_app(icon, item=None) -> None:
+        stop_event.set()
         server.should_exit = True
         icon.stop()
 
@@ -134,4 +170,16 @@ def run_desktop(
     def start_runner(icon) -> None:
         threading.Thread(target=runner.run_forever, daemon=True).start()
 
-    icon.run(setup=start_runner)
+    def run_icon() -> None:
+        try:
+            icon.run(setup=start_runner)
+        except Exception as exc:
+            print(f"tray error: {exc}")
+            stop_event.set()
+
+    threading.Thread(target=run_icon, daemon=True).start()
+    try:
+        wait_for_stop(stop_event)
+    finally:
+        server.should_exit = True
+        icon.stop()
